@@ -1,0 +1,222 @@
+name: CI
+
+# Verify -> package + real VS Code window -> dependency audit -> one required summary.
+#
+# Nothing in this workflow reads a secret, so nothing needs a token with write access.
+# `pull_request` rather than `pull_request_target` is deliberate: the latter runs the
+# base workflow with an elevated token against untrusted head code.
+
+on:
+  pull_request:
+    branches: [main]
+  push:
+    branches: [main]
+  workflow_dispatch:
+
+permissions:
+  contents: read
+
+concurrency:
+  group: ${{ github.workflow }}-${{ github.event.pull_request.number || github.ref }}
+  cancel-in-progress: true
+
+env:
+  # The version every step that touches the dev toolchain runs against. It is 22 because of
+  # what the tools actually declare: @vscode/vsce requires node >= 22 and eslint 9 requires
+  # ^18.18 || ^20.9 || >=21.1. Running packaging on 20 would fail, and running it on the
+  # product's floor (18.17) would fail twice.
+  NODE_VERSION: "22"
+
+jobs:
+  # ---------------------------------------------------------------- portable
+  # Everything that needs only Node built-ins. The matrix is deliberately asymmetric:
+  # three Node lines on one operating system, one Node line on each of the other two.
+  # A missing API or too-new syntax is operating-system independent, so running all nine
+  # combinations would test the same thing three times over for three times the minutes.
+  #
+  # 18.17 is the declared floor in engines.node — the Node line the oldest supported VS Code
+  # (1.85) shipped with — and it is tested rather than assumed. A static scan of every shipped
+  # file found no API newer than that floor; see docs/DEVELOPMENT.md.
+  #
+  # `toolchain: false` runs ONLY the dependency-free gate on that floor. ESLint cannot install
+  # and vsce cannot run below their declared engines, so pretending the floor is a supported
+  # contribution environment would be a false claim — the floor is a runtime claim, not a
+  # toolchain claim, and the matrix says so per line.
+  verify:
+    name: Verify · ${{ matrix.os }} · Node ${{ matrix.node }}
+    runs-on: ${{ matrix.os }}
+    timeout-minutes: 20
+    strategy:
+      fail-fast: false
+      matrix:
+        # Written as include entries, not os x node, so the asymmetry above is explicit
+        # rather than produced by exclude rules.
+        include:
+          - os: ubuntu-latest
+            node: "18.17"
+            toolchain: false
+          - os: ubuntu-latest
+            node: "20"
+            toolchain: false
+          - os: ubuntu-latest
+            node: "22"
+            toolchain: true
+          - os: windows-latest
+            node: "22"
+            toolchain: true
+          - os: macos-latest
+            node: "22"
+            toolchain: true
+    steps:
+      - uses: actions/checkout@3d3c42e5aac5ba805825da76410c181273ba90b1 # v7.0.1
+        with:
+          # The gate reports credentials that were committed and later deleted, which a
+          # shallow clone would hide.
+          fetch-depth: 0
+
+      - uses: actions/setup-node@949feb2413d6458794dcd2491c4babbbce0c15c1 # v7.1.0
+        with:
+          node-version: ${{ matrix.node }}
+          cache: npm
+          cache-dependency-path: package-lock.json
+
+      - name: Report the runtime actually used
+        run: node --version
+
+      - name: Offline verification suite
+        run: node scripts/check.js
+
+      - name: Server subset
+        run: node scripts/check.js --only server
+
+      - name: Shared-core drift
+        run: node scripts/vendor-shared.js --check
+
+      - name: Install the dev toolchain
+        if: matrix.toolchain
+        run: npm ci
+
+      - name: Lint
+        if: matrix.toolchain
+        run: npm run lint
+
+      - name: Type-safety boundary
+        if: matrix.toolchain
+        run: npm run typecheck
+
+  # ------------------------------------------------- packaging + real editor
+  # One job on one runner, because the artifact and the editor that loads it have to be
+  # checked together: the packaged build is what a user installs, and only a real VS Code
+  # window proves the commands, the webview and the measured layout work inside it.
+  #
+  # Linux only, and that is a limitation rather than a platform claim — the window needs
+  # an X server, which the runner provides through Xvfb. These two steps are not
+  # equivalent macOS or Windows coverage and are not claimed as such.
+  package:
+    name: Package and run in VS Code · ubuntu
+    runs-on: ubuntu-latest
+    timeout-minutes: 30
+    env:
+      # Electron's sandbox needs user namespaces, which a container may not permit.
+      # The window is disposable and runs an isolated profile directory.
+      ELECTRON_DISABLE_SANDBOX: "1"
+    steps:
+      - uses: actions/checkout@3d3c42e5aac5ba805825da76410c181273ba90b1 # v7.0.1
+
+      - uses: actions/setup-node@949feb2413d6458794dcd2491c4babbbce0c15c1 # v7.1.0
+        with:
+          node-version: ${{ env.NODE_VERSION }}
+          cache: npm
+          cache-dependency-path: package-lock.json
+
+      # A separate step on purpose. If the runner image lacks a shared library Electron
+      # needs, this fails here with the loader's own message instead of surfacing later
+      # as an unexplained suite timeout. Nothing is installed on trust: the image lists
+      # xvfb as preinstalled, and the library set is asserted by running the binary.
+      - name: Download VS Code and check that it starts
+        run: |
+          set -euo pipefail
+          curl -fsSL -o "$RUNNER_TEMP/code.tar.gz" https://update.code.visualstudio.com/latest/linux-x64/stable
+          mkdir -p "$RUNNER_TEMP/vscode"
+          tar -xzf "$RUNNER_TEMP/code.tar.gz" -C "$RUNNER_TEMP/vscode"
+          test -x "$RUNNER_TEMP/vscode/VSCode-linux-x64/code"
+          echo "EIS_CODE_BIN=$RUNNER_TEMP/vscode/VSCode-linux-x64/code" >> "$GITHUB_ENV"
+          xvfb-run -a "$RUNNER_TEMP/vscode/VSCode-linux-x64/code" --version
+
+      - name: Shared-core synchronization before packaging
+        run: node scripts/vendor-shared.js --check
+
+      - name: Install the dev toolchain
+        run: npm ci
+
+      - name: Build the extension package
+        run: npm run package:ext
+
+      - name: Verify the package
+        run: npm run verify:package
+
+      - name: Real VS Code window against the working tree
+        run: xvfb-run -a node scripts/vscode-window-check.js
+
+      - name: Real VS Code window against the packaged artifact
+        run: xvfb-run -a node scripts/vscode-window-check.js --from-package
+
+      - name: Upload the .vsix
+        uses: actions/upload-artifact@cf430e030ddbb5b0abf93d22962f4752f3646cd9 # v7.0.2
+        with:
+          name: explain-it-simply-vsix
+          path: explain-it-simply-vs-code-extension/*.vsix
+          if-no-files-found: error
+          retention-days: 14
+
+  # ------------------------------------------------------------ dependencies
+  # The rules live in scripts/audit-policy.js so they are one thing, reviewable, and the
+  # same verdict is reproducible locally with `npm run audit`. Production trees have no
+  # severity floor at all; a high that reaches only the build toolchain is tolerated only
+  # when its GHSA id is named there, and a named id that npm stops reporting fails too.
+  audit:
+    name: Dependency audit
+    runs-on: ubuntu-latest
+    timeout-minutes: 15
+    steps:
+      - uses: actions/checkout@3d3c42e5aac5ba805825da76410c181273ba90b1 # v7.0.1
+
+      - uses: actions/setup-node@949feb2413d6458794dcd2491c4babbbce0c15c1 # v7.1.0
+        with:
+          node-version: ${{ env.NODE_VERSION }}
+
+      - name: Install the web server production tree
+        working-directory: explain-it-simply-website
+        run: npm ci --omit=dev
+
+      - name: Install the build toolchain
+        run: npm ci
+
+      - name: Audit policy — production clean, every dev-only high named
+        run: node scripts/audit-policy.js
+
+  # ------------------------------------------------------------------ output
+  # One name to point a required status check at in branch protection. It treats
+  # skipped, cancelled and timed-out as failures, so a gate that never ran cannot be
+  # mistaken for a gate that passed.
+  ci-summary:
+    name: All required checks
+    needs: [verify, package, audit]
+    if: always()
+    runs-on: ubuntu-latest
+    timeout-minutes: 5
+    steps:
+      - name: Fail unless every job passed
+        env:
+          RESULTS: ${{ toJSON(needs.*.result) }}
+        run: |
+          set -euo pipefail
+          echo "job results: $RESULTS"
+          lowered=$(printf '%s' "$RESULTS" | tr '[:upper:]' '[:lower:]')
+          for bad in failure cancelled skipped neutral timed_out; do
+            if printf '%s' "$lowered" | grep -q "\"$bad\""; then
+              echo "::error::a required job did not pass ($bad)"
+              exit 1
+            fi
+          done
+          echo "all required jobs passed"

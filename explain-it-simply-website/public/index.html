@@ -1,0 +1,129 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<title>Explain It Simply — two-layer explanations for code and concepts</title>
+<meta name="description" content="Ask about a concept or paste code and get two layers of explanation: a plain-language one you can act on, and a precise technical one.">
+<meta name="color-scheme" content="dark light">
+<link rel="stylesheet" href="styles.css">
+<link rel="icon" href="data:,">
+</head>
+<body>
+
+<header class="topbar">
+  <a class="wordmark" href="#top">Explain<span>ItSimply</span></a>
+  <nav aria-label="Primary">
+    <a href="#how">How it works</a>
+    <a href="#for">Who it is for</a>
+    <a class="cta" href="/app.html">Open the explainer</a>
+  </nav>
+</header>
+
+<main id="top">
+
+  <!-- ── landing ─────────────────────────────────────────────── -->
+  <section class="hero" aria-labelledby="hero-title">
+    <div class="hero-copy">
+      <p class="eyebrow">For developers, students and anyone reading unfamiliar code</p>
+      <h1 id="hero-title">Most answers pick a level.<br>This one gives you <em>both</em>.</h1>
+      <p class="lede">
+        Explain It Simply answers any topic or block of code twice: once in plain language you
+        can follow in fifteen seconds, and once with the precise terminology, mechanism and
+        edge cases. You decide which layer you need — and you can go deeper from either one.
+      </p>
+      <div class="hero-actions">
+        <a class="button primary" href="/app.html">Explain something now</a>
+        <a class="button quiet" href="#how">See how it works</a>
+      </div>
+      <p class="privacy-note" id="privacy-note">Loading provider information…</p>
+    </div>
+
+    <div class="hero-sample" aria-hidden="true">
+      <p class="sample-label">Same question, two layers</p>
+      <dl class="sample">
+        <div>
+          <dt>Explain it simply</dt>
+          <dd>A REST API is a waiter: you say what you want, it carries the request to the
+            kitchen and brings back exactly that plate. It never remembers your order between visits.</dd>
+        </div>
+        <div>
+          <dt>Technical breakdown</dt>
+          <dd>Stateless request/response over HTTP, with resources addressed by URI and verbs
+            mapping to CRUD: GET to read, POST to create, PUT to replace, DELETE to remove.
+            Payloads are usually JSON; correctness comes from idempotence and status codes,
+            not from server memory.</dd>
+        </div>
+      </dl>
+    </div>
+  </section>
+
+  <section class="ladder" id="how" aria-labelledby="how-title">
+    <h2 id="how-title">Three moves, in order</h2>
+    <ol>
+      <li>
+        <span class="num">01</span>
+        <h3>Ask in the shape you have</h3>
+        <p>Type a question, paste a function, or pick a starting point. Language and depth are
+          explicit choices, not guesses.</p>
+      </li>
+      <li>
+        <span class="num">02</span>
+        <h3>Read the layer you need</h3>
+        <p>The simple layer for the idea, the technical layer for the detail, then how it works,
+          examples, pitfalls and issues only when the answer has them.</p>
+      </li>
+      <li>
+        <span class="num">03</span>
+        <h3>Continue from the answer</h3>
+        <p>Go deeper, ask for simpler, request an example, or run a code action — each one is a
+          real follow-up on the same context, not a fresh chat.</p>
+      </li>
+    </ol>
+  </section>
+
+  <section class="audience" id="for" aria-labelledby="for-title">
+    <h2 id="for-title">Who it is for</h2>
+    <div class="grid">
+      <article>
+        <h3>Developers reading foreign code</h3>
+        <p>Someone else's 60-line function, a legacy shell script, a config loader you did not
+          write. Get the mechanism, the dependencies and what could go wrong.</p>
+      </article>
+      <article>
+        <h3>Students and self-taught programmers</h3>
+        <p>Learn the concept first, then the vocabulary. Key concepts and common mistakes are
+          part of the deep answer, not an afterthought.</p>
+      </article>
+      <article>
+        <h3>Teams onboarding people</h3>
+        <p>The VS Code extension explains the selection, the function at the caret, or the error
+          the editor is already complaining about — inside the file you are reading.</p>
+      </article>
+    </div>
+  </section>
+
+  <section class="extension-pitch" aria-labelledby="ext-title">
+    <div>
+      <h2 id="ext-title">The same answers, inside your editor</h2>
+      <p>The extension keeps the context where it belongs: your selection. Commands are
+        context-aware — with text selected you get <em>Explain Selection</em>, with the caret in a
+        function you get <em>Explain Function</em>, and on a line with a real diagnostic you get
+        <em>Explain Error</em>. Keys are stored in your OS keychain, history stays local, and you
+        choose how much of your source code, if any, is kept afterwards.</p>
+      <p class="hint">This website uses a server-side key. The extension talks to the provider
+        directly with your own key.</p>
+    </div>
+    <a class="button quiet" href="vscode:extension/explain-it-simply.explain-it-simply">Install the extension</a>
+  </section>
+</main>
+
+<footer class="site-footer">
+  <p>Explain It Simply — an explanation layer for developers and learners.</p>
+  <p class="hint">Nothing is sent to a model until you ask. This server only reports the provider,
+    model and size of what it sends back.</p>
+</footer>
+
+<script src="landing.js"></script>
+</body>
+</html>

@@ -1,0 +1,383 @@
+{
+  "name": "explain-it-simply",
+  "displayName": "Explain It Simply",
+  "description": "AI-powered dual-level explanations for code and concepts, with context-aware commands",
+  "version": "2.0.4",
+  "publisher": "explain-it-simply",
+  "license": "MIT",
+  "author": "Naaman Jain",
+  "repository": {
+    "type": "git",
+    "url": "https://github.com/naamanjain/eis.git"
+  },
+  "engines": {
+    "vscode": "^1.85.0"
+  },
+  "categories": [
+    "Education",
+    "Programming Languages",
+    "Other"
+  ],
+  "activationEvents": [],
+  "capabilities": {
+    "untrustedWorkspaces": {
+      "supported": "limited",
+      "description": "Everything works in an untrusted folder, but the settings that decide how much of the workspace is sent to an AI provider or kept on disk are ignored when they come from the folder itself, so an unknown repository cannot widen what leaves your machine. Add them in user settings to change them.",
+      "restrictedConfigurations": [
+        "explainItSimply.context.currentFile",
+        "explainItSimply.context.maxCharacters",
+        "explainItSimply.audit.aiFiles",
+        "explainItSimply.audit.maxSendChars",
+        "explainItSimply.privacy.saveHistory",
+        "explainItSimply.privacy.codeRetention"
+      ]
+    },
+    "virtualWorkspaces": {
+      "supported": "limited",
+      "description": "Explaining a selection, a topic or an error works in a browser-based workspace. The project audit needs a real filesystem: it reads file sizes through Node, and when those calls fail it reports the files as unreadable rather than crashing."
+    }
+  },
+  "main": "./src/extension.js",
+  "contributes": {
+    "commands": [
+      {
+        "command": "explainItSimply.openPanel",
+        "title": "Explain It Simply: Open Panel",
+        "icon": "$(book)"
+      },
+      {
+        "command": "explainItSimply.openSidePanel",
+        "title": "Explain It Simply: Open in Sidebar",
+        "icon": "$(book)"
+      },
+      {
+        "command": "explainItSimply.openPanelInEditor",
+        "title": "Explain It Simply: Open in Editor Area"
+      },
+      {
+        "command": "explainItSimply.explainSelection",
+        "title": "Explain It Simply: Explain Selection"
+      },
+      {
+        "command": "explainItSimply.explainFunction",
+        "title": "Explain It Simply: Explain Function at Cursor"
+      },
+      {
+        "command": "explainItSimply.explainFile",
+        "title": "Explain It Simply: Explain Current File"
+      },
+      {
+        "command": "explainItSimply.explainError",
+        "title": "Explain It Simply: Explain Error Here"
+      },
+      {
+        "command": "explainItSimply.explainTopic",
+        "title": "Explain It Simply: Explain a Topic"
+      },
+      {
+        "command": "explainItSimply.teachMe",
+        "title": "Explain It Simply: Teach Me This"
+      },
+      {
+        "command": "explainItSimply.simplifyCode",
+        "title": "Explain It Simply: Simplify Code"
+      },
+      {
+        "command": "explainItSimply.findIssues",
+        "title": "Explain It Simply: Find Issues"
+      },
+      {
+        "command": "explainItSimply.optimizeCode",
+        "title": "Explain It Simply: Optimize Code"
+      },
+      {
+        "command": "explainItSimply.addComments",
+        "title": "Explain It Simply: Add Comments"
+      },
+      {
+        "command": "explainItSimply.generateTest",
+        "title": "Explain It Simply: Generate Test"
+      },
+      {
+        "command": "explainItSimply.generateExample",
+        "title": "Explain It Simply: Generate Example"
+      },
+      {
+        "command": "explainItSimply.auditProject",
+        "title": "Explain It Simply: Audit Project"
+      },
+      {
+        "command": "explainItSimply.auditFile",
+        "title": "Explain It Simply: Audit Current File"
+      },
+      {
+        "command": "explainItSimply.clearAuditDiagnostics",
+        "title": "Explain It Simply: Clear Audit Markers"
+      },
+      {
+        "command": "explainItSimply.refreshModels",
+        "title": "Explain It Simply: Refresh Model List"
+      },
+      {
+        "command": "explainItSimply.openSettings",
+        "title": "Explain It Simply: Open Advanced Settings"
+      },
+      {
+        "command": "explainItSimply.resetSettings",
+        "title": "Explain It Simply: Reset API Settings"
+      },
+      {
+        "command": "explainItSimply.clearHistory",
+        "title": "Explain It Simply: Clear History (keeps pinned)"
+      }
+    ],
+    "menus": {
+      "editor/context": [
+        {
+          "command": "explainItSimply.explainSelection",
+          "when": "editorHasSelection",
+          "group": "explainItSimply@1"
+        },
+        {
+          "command": "explainItSimply.explainFunction",
+          "when": "editorTextFocus && !editorHasSelection",
+          "group": "explainItSimply@1"
+        },
+        {
+          "command": "explainItSimply.explainError",
+          "when": "explainItSimply.hasDiagnostic",
+          "group": "explainItSimply@2"
+        },
+        {
+          "command": "explainItSimply.explainFile",
+          "when": "editorTextFocus",
+          "group": "explainItSimply@3"
+        },
+        {
+          "command": "explainItSimply.findIssues",
+          "when": "editorTextFocus",
+          "group": "explainItSimply@4"
+        },
+        {
+          "command": "explainItSimply.simplifyCode",
+          "when": "editorTextFocus",
+          "group": "explainItSimply@5"
+        },
+        {
+          "command": "explainItSimply.openPanel",
+          "group": "explainItSimply@9"
+        },
+        {
+          "command": "explainItSimply.auditFile",
+          "when": "editorTextFocus",
+          "group": "explainItSimply@6"
+        },
+        {
+          "command": "explainItSimply.auditProject",
+          "when": "explainItSimply.hasWorkspace",
+          "group": "explainItSimply@7"
+        }
+      ],
+      "explorer/context": [
+        {
+          "command": "explainItSimply.auditProject",
+          "when": "explainItSimply.hasWorkspace",
+          "group": "explainItSimply@1"
+        }
+      ],
+      "commandPalette": [
+        {
+          "command": "explainItSimply.explainSelection",
+          "when": "editorHasSelection"
+        },
+        {
+          "command": "explainItSimply.explainFunction",
+          "when": "editorTextFocus"
+        },
+        {
+          "command": "explainItSimply.explainFile",
+          "when": "editorTextFocus"
+        },
+        {
+          "command": "explainItSimply.explainError",
+          "when": "explainItSimply.hasDiagnostic"
+        },
+        {
+          "command": "explainItSimply.simplifyCode",
+          "when": "editorTextFocus"
+        },
+        {
+          "command": "explainItSimply.findIssues",
+          "when": "editorTextFocus"
+        },
+        {
+          "command": "explainItSimply.optimizeCode",
+          "when": "editorTextFocus"
+        },
+        {
+          "command": "explainItSimply.addComments",
+          "when": "editorTextFocus"
+        },
+        {
+          "command": "explainItSimply.generateTest",
+          "when": "editorTextFocus"
+        }
+      ]
+    },
+    "keybindings": [
+      {
+        "command": "explainItSimply.openPanel",
+        "key": "ctrl+alt+e",
+        "mac": "cmd+alt+e"
+      },
+      {
+        "command": "explainItSimply.explainSelection",
+        "key": "ctrl+alt+s",
+        "mac": "cmd+alt+s",
+        "when": "editorTextFocus && editorHasSelection"
+      },
+      {
+        "command": "explainItSimply.explainFunction",
+        "key": "ctrl+alt+f",
+        "mac": "cmd+alt+f",
+        "when": "editorTextFocus"
+      },
+      {
+        "command": "explainItSimply.explainError",
+        "key": "ctrl+alt+d",
+        "mac": "cmd+alt+d",
+        "when": "explainItSimply.hasDiagnostic"
+      }
+    ],
+    "configuration": {
+      "title": "Explain It Simply",
+      "properties": {
+        "explainItSimply.context.surrounding": {
+          "type": "boolean",
+          "default": true,
+          "description": "Include a few lines around the selection so the explanation knows the file's shape."
+        },
+        "explainItSimply.context.currentFile": {
+          "type": "boolean",
+          "default": false,
+          "description": "Send the current file (imports and the enclosing function only, never the whole workspace) alongside the selection."
+        },
+        "explainItSimply.context.maxCharacters": {
+          "type": "number",
+          "default": 8000,
+          "minimum": 500,
+          "maximum": 60000,
+          "description": "Budget for extra context. The selection itself is limited separately."
+        },
+        "explainItSimply.ai.requestTimeoutSeconds": {
+          "type": "number",
+          "default": 45,
+          "minimum": 5,
+          "maximum": 180,
+          "description": "Abort a provider request after this many seconds."
+        },
+        "explainItSimply.ai.maxRetries": {
+          "type": "number",
+          "default": 2,
+          "minimum": 0,
+          "maximum": 5,
+          "description": "Extra attempts for transient failures only (rate limit, network, timeout). Never for bad keys or unreadable answers."
+        },
+        "explainItSimply.ai.structuredOutput": {
+          "type": "boolean",
+          "default": true,
+          "description": "Ask providers that support it to return schema-enforced JSON. Turn off if a provider rejects the extra fields."
+        },
+        "explainItSimply.privacy.saveHistory": {
+          "type": "boolean",
+          "default": true,
+          "description": "Keep explanations in local history so you can reopen them."
+        },
+        "explainItSimply.privacy.codeRetention": {
+          "type": "string",
+          "enum": [
+            "none",
+            "summary",
+            "snippet"
+          ],
+          "default": "snippet",
+          "description": "How much of your code history stores keeps: none (no code), summary (file name + first 160 characters), snippet (up to 4000 characters)."
+        },
+        "explainItSimply.privacy.historyLimit": {
+          "type": "number",
+          "default": 50,
+          "minimum": 0,
+          "maximum": 500,
+          "description": "Maximum number of history entries kept on this machine. Pinned entries are preserved."
+        },
+        "explainItSimply.audit.maxFiles": {
+          "type": "number",
+          "default": 150,
+          "minimum": 1,
+          "maximum": 2000,
+          "description": "How many workspace files the local (free) audit pass reads. Generated and vendor folders are always skipped."
+        },
+        "explainItSimply.audit.aiFiles": {
+          "type": "number",
+          "default": 3,
+          "minimum": 0,
+          "maximum": 12,
+          "description": "How many files the audit sends to the model for judgement. 0 keeps the audit entirely local and free."
+        },
+        "explainItSimply.audit.maxFileBytes": {
+          "type": "number",
+          "default": 200000,
+          "minimum": 2000,
+          "maximum": 1000000,
+          "description": "Largest file the audit will read."
+        },
+        "explainItSimply.audit.maxSendChars": {
+          "type": "number",
+          "default": 40000,
+          "minimum": 2000,
+          "maximum": 400000,
+          "description": "Total characters one audit may send to the model. API credentials it finds are replaced before sending."
+        },
+        "explainItSimply.audit.excludeGlobs": {
+          "type": "array",
+          "items": {
+            "type": "string"
+          },
+          "default": [
+            "**/fixtures/**",
+            "**/snapshots/**"
+          ],
+          "description": "Additional path patterns the audit should skip."
+        },
+        "explainItSimply.audit.showDiagnostics": {
+          "type": "boolean",
+          "default": true,
+          "description": "Show audit findings as editor markers and Problems entries, so you can jump straight to Explain Error."
+        }
+      }
+    },
+    "viewsContainers": {
+      "activitybar": [
+        {
+          "id": "explain-it-simply",
+          "title": "Explain It Simply",
+          "icon": "resources/sidebar.svg"
+        }
+      ]
+    },
+    "views": {
+      "explain-it-simply": [
+        {
+          "type": "webview",
+          "id": "explainItSimply.sidePanel",
+          "name": "Explain It Simply",
+          "contextualTitle": "Explain It Simply"
+        }
+      ]
+    }
+  },
+  "scripts": {
+    "vscode:prepublish": "node ../scripts/vendor-shared.js --check",
+    "vendor": "node ../scripts/vendor-shared.js"
+  }
+}

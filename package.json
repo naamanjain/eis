@@ -1,0 +1,37 @@
+{
+  "name": "explain-it-simply",
+  "version": "2.0.0",
+  "private": true,
+  "description": "AI-powered dual-level explanations for code and concepts: VS Code extension + web app on one shared AI core",
+  "license": "MIT",
+  "author": "Naaman Jain",
+  "repository": {
+    "type": "git",
+    "url": "https://github.com/naamanjain/eis.git"
+  },
+  "scripts": {
+    "check": "node scripts/check.js",
+    "lint": "eslint .",
+    "typecheck": "tsc -p tsconfig.json",
+    "vendor": "node scripts/vendor-shared.js",
+    "vendor:check": "node scripts/vendor-shared.js --check",
+    "start:web": "node explain-it-simply-website/server.js",
+    "check:vscode": "node scripts/vscode-window-check.js",
+    "check:layout": "node explain-it-simply-vs-code-extension/tools/preview/probe.js",
+    "package:ext": "cd explain-it-simply-vs-code-extension && vsce package --allow-missing-repository",
+    "verify:package": "node scripts/verify-package.js",
+    "check:vscode:package": "node scripts/vscode-window-check.js --from-package",
+    "audit": "node scripts/audit-policy.js",
+    "scan:secrets": "node scripts/scan-secrets.js"
+  },
+  "engines": {
+    "node": ">=18.17"
+  },
+  "devDependencies": {
+    "@eslint/js": "9.39.5",
+    "@types/node": "^18.19.130",
+    "@vscode/vsce": "4.1.0",
+    "eslint": "9.39.5",
+    "typescript": "5.9.3"
+  }
+}

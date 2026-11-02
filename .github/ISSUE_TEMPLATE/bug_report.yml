@@ -1,0 +1,87 @@
+name: Bug report
+description: Something does not do what it claims to do
+title: "[bug]: "
+labels: ["bug"]
+body:
+  - type: markdown
+    attributes:
+      value: |
+        Before you file: run `node scripts/check.js` in a clone of this repository. It needs
+        no install and it tells you whether the problem is in the code or in the environment.
+
+        **Never paste an API key into this form** — not a real one, and not a "fake" one that
+        looks real. Redact it to a prefix and a length.
+  - type: dropdown
+    id: surface
+    attributes:
+      label: Which surface
+      description: The VS Code extension and the website share an AI core but run separately
+      options:
+        - VS Code extension
+        - Website / server
+        - Both
+        - Not sure
+    validations:
+      required: true
+  - type: textarea
+    id: what-happened
+    attributes:
+      label: What happened
+      description: The behaviour, in the words you would use to tell a colleague
+    validations:
+      required: true
+  - type: textarea
+    id: expected
+    attributes:
+      label: What you expected instead
+    validations:
+      required: true
+  - type: textarea
+    id: steps
+    attributes:
+      label: Steps to reproduce
+      description: |
+        The exact command or click path. If a model reply is involved, paste the reply —
+        the structured-output parser is where a surprising amount of bugs actually live.
+      placeholder: |
+        1. Open ...
+        2. Select ...
+        3. Run command ...
+    validations:
+      required: true
+  - type: input
+    id: vscode-version
+    attributes:
+      label: VS Code version
+      description: Help ▸ About. Ignored if the surface is the website.
+      placeholder: "1.85.x"
+  - type: input
+    id: node-version
+    attributes:
+      label: Node.js version
+      description: "`node --version`"
+      placeholder: "v20.x.x"
+  - type: input
+    id: provider
+    attributes:
+      label: Provider and model
+      description: e.g. OpenRouter / anthropic/claude-sonnet-5.5
+  - type: textarea
+    id: gate
+    attributes:
+      label: Output of `node scripts/check.js`
+      description: |
+        Paste the tail of the run, including the pass count and any warnings. If it fails on
+        a machine you cannot fix, say so — a blocked check is reported as blocked, not passed.
+      render: shell
+  - type: checkboxes
+    id: duplicates
+    attributes:
+      label: Preliminary checks
+      options:
+        - label: I searched existing issues and did not find this one
+          required: true
+        - label: This report contains no API keys, tokens or other secrets
+          required: true
+        - label: I am willing to open a pull request for it
+          required: false

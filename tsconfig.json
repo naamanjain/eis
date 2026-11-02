@@ -1,0 +1,60 @@
+{
+  // Targeted type safety, not a migration. The project is dependency-free CommonJS
+  // JavaScript and stays that way; this runs `tsc --noEmit` with checkJs over the
+  // modules that form the stable contracts — the provider adapter boundary, the error
+  // taxonomy, the structured-output schemas and the retry/extract path — where a
+  // renamed field or a wrong-arity call silently becomes a user-facing failure.
+  //
+  //   npm run typecheck
+  //
+  // `strict` is deliberately off. Turning it on would mean annotating the whole tree to
+  // satisfy the flag rather than to describe the code, and a gate nobody can pass is a
+  // gate that gets deleted. What this does catch, measured rather than assumed: unknown
+  // property names on inferred objects, `undefined` used where a value is required, and
+  // malformed JSDoc contracts on the provider boundary. It does not catch a wrong
+  // argument count in a JavaScript file — TypeScript reports nothing for `parseJson()`
+  // against `function parseJson(text)`, so arity is still the verification suite's job,
+  // not this file's. Widening this list to the extension, server and webview is
+  // follow-up work, not a claim this file makes.
+  "compilerOptions": {
+    "allowJs": true,
+    "checkJs": true,
+    "noEmit": true,
+    "target": "ES2022",
+    "lib": ["ES2022"],
+    "module": "CommonJS",
+    "moduleResolution": "node",
+    "types": ["node"],
+    "skipLibCheck": true,
+    "strict": false,
+    // The one strict-family flag switched on, because it is the one that has already
+    // found real defects in this boundary: a list helper that answers `undefined` for an
+    // all-empty array, chained straight into `.map()` in two places, which threw a raw
+    // TypeError instead of a clean malformed-answer error for any model that replied
+    // `potentialIssues: [null]`. Index-signature and implicit-any checking stay off —
+    // they would describe the style of a JavaScript codebase, not its safety.
+    "strictNullChecks": true,
+    "noImplicitAny": false,
+    "noFallthroughCasesInSwitch": true,
+    "noImplicitReturns": false,
+    "allowUnreachableCode": false,
+    "allowUnusedLabels": false,
+    "forceConsistentCasingInFileNames": true
+  },
+  "include": [
+    "shared/errors.js",
+    "shared/ai/extractJson.js",
+    "shared/schema/jsonSchema.js",
+    "shared/schema/explanation.js",
+    "shared/schema/codeChange.js",
+    "shared/schema/util.js",
+    "shared/providers/base.js",
+    "shared/providers/index.js",
+    "shared/providers/registry.js",
+    "shared/providers/keyPool.js",
+    "shared/providers/openaiCompatible.js",
+    "shared/providers/anthropic.js",
+    "shared/providers/google.js",
+    "shared/pipeline/retry.js"
+  ]
+}

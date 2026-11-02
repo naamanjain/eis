@@ -1,0 +1,20 @@
+{
+  "name": "explain-it-simply-website",
+  "version": "2.0.0",
+  "private": true,
+  "description": "Explain It Simply web app: static frontend plus a server-side explanation API backed by the shared AI core",
+  "license": "MIT",
+  "main": "server.js",
+  "type": "commonjs",
+  "engines": {
+    "node": ">=18.17"
+  },
+  "scripts": {
+    "start": "node server.js",
+    "check": "node ../scripts/check.js --only server"
+  },
+  "dependencies": {
+    "dotenv": "^17.3.1",
+    "express": "^5.2.1"
+  }
+}

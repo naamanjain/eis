@@ -1,0 +1,62 @@
+name: Feature request
+description: A capability the product does not have yet
+title: "[feature]: "
+labels: ["enhancement"]
+body:
+  - type: markdown
+    attributes:
+      value: |
+        Explain It Simply is deliberately small: a dependency-free extension, one shared AI
+        core, and a verification gate that runs with no install. Proposals that add a
+        framework, a database or a service need a reason the existing parts cannot do it.
+  - type: textarea
+    id: problem
+    attributes:
+      label: The problem, not the feature
+      description: |
+        What were you trying to do and where did you give up? A concrete session is worth
+        more than a category.
+    validations:
+      required: true
+  - type: textarea
+    id: solution
+    attributes:
+      label: What you would want to happen
+    validations:
+      required: true
+  - type: textarea
+    id: alternatives
+    attributes:
+      label: What you tried instead
+      description: Including settings and commands you found in the palette.
+  - type: dropdown
+    id: surface
+    attributes:
+      label: Where it belongs
+      options:
+        - VS Code extension
+        - Website / server
+        - Shared AI core (providers, schemas, prompts, context)
+        - Verification and tooling
+        - Documentation
+    validations:
+      required: true
+  - type: textarea
+    id: contract
+    attributes:
+      label: What it would touch
+      description: |
+        Commands a user already relies on, setting keys, provider ids, the shape of
+        `/api/explain`, or the webview message protocol. Changing any of these is a breaking
+        change and should be said out loud here.
+  - type: checkboxes
+    id: scope
+    attributes:
+      label: Preliminary checks
+      options:
+        - label: I searched existing issues and discussions for this
+          required: true
+        - label: It needs no new runtime dependency, or I explained why one is unavoidable
+          required: true
+        - label: I would implement it, given the guidance in docs/DEVELOPMENT.md
+          required: false

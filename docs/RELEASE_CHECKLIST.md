@@ -1,0 +1,136 @@
+# Release checklist
+
+Every line here is a command that exists in this repository or a setting the owner controls.
+Nothing on this list may be ticked from memory: tick it because you ran it and read the
+output.
+
+## 1. Freeze and verify the tree
+
+```bash
+git status --porcelain          # must be empty, or the release builds from unreviewed work
+git log --oneline -5
+```
+
+- [ ] Working tree is clean, or every uncommitted file is deliberately part of this release
+- [ ] `node scripts/check.js` — record the pass count printed, currently `160/160`
+- [ ] `node scripts/check.js --only server`
+- [ ] `npm run vendor:check` — reports the number of synchronized files
+- [ ] `rm -rf node_modules && npm ci && npm ls --depth=0` — the lockfile installs reproducibly
+      from scratch and resolves exactly the declared dev dependencies
+- [ ] `npm run lint`
+- [ ] `npm run typecheck`
+
+Warnings are not failures, but they must be **carried forward**, not dropped. The gate
+currently prints a standing warning about a committed credential whose revocation is
+unconfirmed; a release that omits it from the notes is a release that hides it.
+
+## 2. Build
+
+```bash
+npm run vendor                  # only if shared/ changed
+npm run package:ext             # runs vendor:check via vscode:prepublish
+npm run verify:package
+```
+
+- [ ] Version bumped in `explain-it-simply-vs-code-extension/package.json`
+- [ ] `npm run package:ext` produced exactly one `.vsix` and it is the new version
+- [ ] `npm run verify:package` passes all nine checks
+- [ ] `npm run scan:secrets` reports 0 leaks across history, working files and the package, and
+      prints that its planted control credential **was** detected
+- [ ] Record the `.vsix` SHA-256 and its byte size; the release note and the local manifest must
+      carry the same digest
+- [ ] `CHANGELOG.md` has an entry for the version, naming the user-visible behaviour change.
+      Move what is under `[Unreleased]` into a dated section as part of the release — the file
+      records no version boundaries before 2.0.4, because none were ever recorded
+
+## 3. Run it in a real editor
+
+```bash
+npm run check:vscode              # working tree
+npm run check:vscode:package      # the packaged artifact
+npm run check:layout              # needs Chrome
+```
+
+- [ ] The real-window suite passes against the working tree
+- [ ] The same suite passes against the **packaged** artifact — this is the build a user gets
+- [ ] `check:layout` passes at the narrow rail and the wide panel widths
+- [ ] Installed into a local VS Code (`code --install-extension <file>.vsix`) and the Activity
+      Bar icon opens the panel, a selection explains, and the result scrolls
+- [ ] Restricted Mode re-verified by hand, per the A/B procedure in `docs/DEVELOPMENT.md`: the
+      automated suite cannot see it (`--disable-workspace-trust`), and the unrestricted
+      `audit.maxFiles` control must be honoured in the untrusted run or the test proves nothing
+
+If you cannot run these, the release is **not verified on that surface**. Say so in the
+release notes instead of leaving it unstated.
+
+## 4. Server
+
+- [ ] `cd explain-it-simply-website && npm ci --omit=dev && npm start` binds and serves
+- [ ] `GET /api/catalog` lists only providers and models the registry actually has
+- [ ] `POST /api/explain` and the SSE route return a structured answer with a mocked key
+- [ ] **The same route returns a real answer with the key that ships in the deployment.** A mocked key
+      proves the plumbing; it cannot prove the product. As of 2026-10-29 this bullet is untickable on
+      this machine: both keys in `.env` are refused by their providers, so the core feature fails for
+      every visitor
+- [ ] A deployment target exists and is named — `ci.yml` has no deploy step and the docs carry no
+      production URL, so today there is nothing to check headers, HTTPS and CSP against except a
+      loopback instance
+- [ ] Binding beyond loopback without `EIS_ACCESS_TOKEN` is refused at startup
+- [ ] No secret appears in a response body, a log line, or a saved file
+
+## 5. Security review before publishing
+
+- [ ] `node scripts/check.js` reports no credential in tracked files
+- [ ] No new credential-shaped fixture was added (the gate scans test files too)
+- [ ] `npm audit --omit=dev` in `explain-it-simply-website` — zero, or each finding written
+      into the release notes with its severity
+- [ ] `npm run audit` at the root (after `npm ci`) — `scripts/audit-policy.js`: production must be
+      clean at any severity, and every dev-only advisory at any severity must be named there. As of
+      2.0.4 it passes carrying one named limitation, `GHSA-g3hv-75wg-m249` (`minimatch`, moderate,
+      dev-only, no compatible upgrade because both consumers declare `^10.2.6`), which must appear in
+      the release notes with that wording rather than as resolved. A named id that npm no longer
+      reports is itself a failure, so the entry cannot outlive the advisory.
+- [ ] `.env`, keys and local paths are absent from the `.vsix` (`verify:package` asserts this)
+- [ ] Past incidents restated in the release notes, not summarized away. `.github/SECURITY.md` is
+      the published disclosure for this repository: it states what was exposed in the earlier private
+      repository, that the credentials were revoked, and that none of that history was imported here.
+      Do not describe a credential as revoked because a document says so — the claim belongs to the
+      owner, and this repository's job is to prove its own history is clean with
+      `node scripts/secret-inventory.js` and `npm run scan:secrets`.
+- [ ] `node scripts/secret-inventory.js` exits 0 and reports no confirmed value in tracked files
+      or the package (it prints categories, lengths and digests only — safe to paste into a
+      release note)
+
+## 6. Publish
+
+These are owner actions and are not performed by an agent without authorization.
+
+- [ ] A tag exists for the version (`git tag -a v<version>`) and `git ls-remote --tags origin`
+      shows exactly that tag on the commit that was verified
+- [ ] `main` on the remote is the commit that was verified — checked with
+      `git rev-parse HEAD` against `git ls-remote origin main`, not assumed
+- [ ] CI is green on the pushed commit, including the `All required checks` job
+- [ ] The `.vsix` from CI's artifact is the one published, or `vsce publish` run from the
+      same commit
+- [ ] Extension Marketplace listing matches what the code actually does
+
+## 7. After publishing
+
+- [ ] Install the released version from the marketplace in a clean VS Code profile and repeat
+      the golden path
+- [ ] Open issues caused by this release are labelled and linked to the version
+- [ ] Any revoked-or-unconfirmed credential is still listed as open until the owner confirms
+      provider-side revocation
+
+## Not yet in this checklist
+
+Things the repository cannot honestly assert yet, so no line pretends they happen:
+
+- A signed release artifact (no signing key or `signCode` step is configured).
+- Automated marketplace publication on tag (CI builds and verifies the `.vsix`, it does not
+  publish it).
+- Cross-platform **proof** for the real-window suite: it runs on Linux under Xvfb in CI and
+  on Windows locally; macOS has never run it.
+- A licence. `LICENSE` is MIT, copyright 2026 the repository owner; the third-party position is in
+  open, which blocks publishing the extension as open source and blocks any marketplace listing
+  that implies a grant.

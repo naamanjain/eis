@@ -1,0 +1,29 @@
+{
+  "source": "shared/",
+  "files": {
+    "ai/extractJson.js": "611f10a8c75204a73b95ca0c986fe81d2e232885334f98d3509cf1f84c7b1c87",
+    "audit/localFindings.js": "20d11829b085a36aefbfeacf161d814f3fbd81a71e499060eca0480ae6d7ed31",
+    "context/contextEngine.js": "9347ee75e8570c1a5d3fb6d636659d98bab24fd3ac7def8566228c7c0b720b8f",
+    "errors.js": "15d81e53a89903b4290b8ce837984767e1377f1320cf4a21225b9973520abc9d",
+    "http/client.js": "837e2ecd107961b699f4f3a68fdb137b72c00caa57d3c10d36346df2a2fa77e8",
+    "http/sse.js": "6d213100b53cab9bb2f40480fd08df5d250cd3b30b8bf226d52fa121a964ad8b",
+    "index.js": "ad226cb3d42347aaafff332f92ceb2b56f5ae579676bce8d4d206030b77de73e",
+    "observability/logger.js": "6360710794a3a5abc8f9511c48cfd1cb92ee6fc3cb7f06afa8095b6aea92998e",
+    "pipeline/pipeline.js": "f5adacd8ea440d0a0688487e970adba3ed71d1864e2f003b583869aeec2cfa49",
+    "pipeline/requestLedger.js": "37457059169831bd695dc12bcad997e83a55d101c1b6d35661e55d1c9977e3dd",
+    "pipeline/retry.js": "cdf36f3479f8b255cf18e4928dbc2fb238e66943079eb25277e12fa7d15a6e77",
+    "prompts/tasks.js": "e7d4cf2e8ea1cec6b6e73ff37e1d1d22c14c76f437ccb37affcbe112d776bc77",
+    "providers/anthropic.js": "199f415d7b8c5b5977d20e202572e295646f076570275078106906ef0e37cc0f",
+    "providers/base.js": "05ea6e777b3b8ef645f64d90c65eefc1a6f04ffd2a27b934a13925bb36ce249f",
+    "providers/google.js": "c7bb85634ef2c797fde09cc663f95b9c64c8df066bb45a07eb6d91e2a9ea73be",
+    "providers/index.js": "6b15d1f0ba5193064fd0d7bad8416c853f0b59b794af06d8953fcb9b561549ee",
+    "providers/keyPool.js": "f8fc2c6829b5804cdc41564480dcb992c6e3ff56297dc6a37b2db7c5b38b03cc",
+    "providers/openaiCompatible.js": "034d5cd5c097e55d3ff636fb31f8d307a653a253db639e04e72670d44252c266",
+    "providers/registry.js": "5441e3ef4f0bed3181de73439b7569d200e9a71936c269c2d134420620695f62",
+    "schema/codeChange.js": "29275f13375db3fd81f34bbcc95274408d73bc1e6f3aeeb4956ee4af895c8b3a",
+    "schema/explanation.js": "8181c6175d7dd616e6b06751e7f8015dedcdc44d1a9df2c71b60939dec6d5b8a",
+    "schema/jsonSchema.js": "4fdb7c119455a3b4887509d20584bef264e2706c2c2b40d22b57b3ecc54e1f47",
+    "schema/util.js": "a99b6a7d24b35f570dfcc67796fa5a56db76e94f86ea519234deaa3c1aca738b"
+  },
+  "count": 23
+}
