@@ -510,11 +510,23 @@ async function checkCi() {
 
   await check('CI asks for read-only permissions and references no secret', () => {
     const text = fs.readFileSync(CI_WORKFLOW, 'utf8');
-    const permissions = /^permissions:\n((?:^[ ]{2}\S.*\n?)+)/m.exec(text);
+    // One pattern, used twice: to read the workflow and to read a CRLF copy of it. If the guard
+    // tested its own separate copy of the regex it would keep passing while the real parse broke.
+    const PERMISSIONS = /^permissions:\r?\n((?:^[ ]{2}\S.*\r?\n?)+)/m;
+    const permissions = PERMISSIONS.exec(text);
     if (!permissions) fail('no top-level permissions: block');
     if (!/^[ ]{2}contents: read\s*$/m.test(permissions[1])) fail('contents is not read-only');
     if (/\bwrite\b/.test(permissions[1])) fail(`workflow permissions request a write scope: ${permissions[1].trim()}`);
     if (/secrets\./.test(text)) fail('a step reads a secret, which fork pull requests must never receive');
+    // A GitHub-hosted Windows runner checks the repository out with core.autocrlf=true, so this
+    // file is read with CRLF on that leg and LF on the others. A pattern that only matches one of
+    // the two reports "no permissions block" against a workflow that has one — a false accusation
+    // indistinguishable from someone actually deleting it. Found by cloning the published
+    // repository on Windows, where the checkout arrived as CRLF.
+    const crlf = text.replace(/\r\n/g, '\n').split('\n').join('\r\n');
+    const samePattern = new RegExp(PERMISSIONS.source, PERMISSIONS.flags);
+    if (!samePattern.test(crlf)) fail('the permissions parse is line-ending dependent: it would fail on a Windows runner checkout');
+    if (!ciJobBlocks(crlf)) fail('the job parser is line-ending dependent');
   });
 
   await check('every action used by CI is pinned to an immutable commit sha', () => {
