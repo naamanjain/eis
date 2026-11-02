@@ -148,7 +148,7 @@ vendoring workflow.
 |---|---|
 | "This server is not configured with a provider key" | No key in `SecretStorage` (extension) or the environment (web). Nothing you type can work until one exists. |
 | The provider refuses the key | The key is wrong, scoped to a different project, or revoked. Check the provider's own console; do not probe a key by spending it. |
-| `npm run check` reports a credential warning | A key-shaped value is sitting in a file the scan can read — usually a local `.env`. It is a reminder to revoke once, not a build error. |
+| `npm run check` reports a credential warning | Either a key-shaped value is sitting in a file the scan can read — usually a local `.env` — or the history scan found nothing at all, which is what a clean repository looks like and also what a broken scan looks like. The warning tells you which case you are in; it is not a build error. |
 | A model id is refused as retired | `shared/providers/registry.js` records retired ids with a recovery message; pick a current one from the live list. |
 | `npm run check:vscode` exits 1 with "no VS Code executable found" | Blocked, not failed. Set `EIS_CODE_BIN` to your `code` binary. Never export `ELECTRON_RUN_AS_NODE` into it — that turns `Code.exe` into a plain Node binary. |
 | `npm run scan:secrets` says no scanner found | Install Gitleaks and point `EIS_GITLEAKS_BIN` at it. An unrun scan is reported as a failure on purpose. |

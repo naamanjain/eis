@@ -12,7 +12,7 @@ git log --oneline -5
 ```
 
 - [ ] Working tree is clean, or every uncommitted file is deliberately part of this release
-- [ ] `node scripts/check.js` — record the pass count printed, currently `161/161`
+- [ ] `node scripts/check.js` — record the pass count printed, currently `162/162`
 - [ ] `node scripts/check.js --only server`
 - [ ] `npm run vendor:check` — reports the number of synchronized files
 - [ ] `rm -rf node_modules && npm ci && npm ls --depth=0` — the lockfile installs reproducibly
@@ -20,9 +20,11 @@ git log --oneline -5
 - [ ] `npm run lint`
 - [ ] `npm run typecheck`
 
-Warnings are not failures, but they must be **carried forward**, not dropped. The gate
-currently prints a standing warning about a committed credential whose revocation is
-unconfirmed; a release that omits it from the notes is a release that hides it.
+Warnings are not failures, but they must be **carried forward**, not dropped. The gate prints one
+standing warning in this repository: the history scan found no credential in it, which is the same
+output a history scan that is not running would produce, so it says so out loud rather than
+reporting a silent all-clear. A different warning — one that names a commit — means a credential
+really is in the history you are looking at. Read it; never release with an unread warning.
 
 ## 2. Build
 
