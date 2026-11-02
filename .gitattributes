@@ -1,0 +1,39 @@
+# Line endings are a build input, not a preference.
+#
+# Without this file a Windows checkout with core.autocrlf=true rewrites every text file to CRLF, and
+# the same commit then produces a .vsix whose members differ byte-for-byte from the one built on
+# Linux — identical content, different checksum, and an artifact hash that cannot be quoted as proof
+# of what a release contains. It also hands the verification gate two different renderings of the
+# same source, which is where a line-ending-dependent pattern goes unnoticed until a runner leg
+# reports a security setting as missing.
+#
+# eol=lf wins over a developer's core.autocrlf, so the working tree matches the blob everywhere.
+* text=auto eol=lf
+
+# Files whose bytes are not text. Normalising these would corrupt them silently.
+*.png binary
+*.jpg binary
+*.jpeg binary
+*.gif binary
+*.ico binary
+*.vsix binary
+*.zip binary
+*.gz binary
+*.tgz binary
+*.pdf binary
+*.docx binary
+*.woff binary
+*.woff2 binary
+*.ttf binary
+*.eot binary
+
+# Extension metadata and assets that must stay exact.
+*.json text eol=lf
+*.js text eol=lf
+*.css text eol=lf
+*.html text eol=lf
+*.md text eol=lf
+*.yml text eol=lf
+*.toml text eol=lf
+*.svg text eol=lf
+.env.example text eol=lf
