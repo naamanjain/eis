@@ -1,0 +1,122 @@
+# ============================================================================
+# Explain It Simply — what must never be committed
+#
+# The secret rules below are deliberately wider than "tidy". This project has
+# previously had an API key committed in a file named `env`, in `.env`, and in
+# vendor-named credential JSON — so the patterns cover the shapes a key actually
+# arrives in, not just the obvious filename. Do not narrow them to make a
+# legitimate-looking file committable; move the file instead.
+# ============================================================================
+
+# --- Credentials ----------------------------------------------------------
+.env
+.env.*
+!.env.example
+env
+env.*
+*.key
+*.pem
+*.p12
+*.kdbx
+secrets/
+*.kstore
+.git-credentials
+.netrc
+
+# Private keys with no extension at all, and cloud credential files named by
+# the vendor rather than by us — these are the shapes the tools actually emit.
+id_rsa
+id_dsa
+id_ecdsa
+id_ed25519
+known_hosts
+*.ppk
+*.pfx
+credentials.json
+credentials-*.json
+service-account*.json
+firebase-adminsdk*.json
+gha-creds.json
+.aws/
+.gcloud/
+.azure/
+.config/gcloud/
+
+# --- Installed dependencies and reproducible build output ------------------
+node_modules/
+dist/
+build/
+out/
+*.map
+*.tsbuildinfo
+
+# --- Generated packages ----------------------------------------------------
+# This repository keeps releases as GitHub Release assets rather than versioning
+# them, so a locally built package should never appear as a tracked file.
+*.vsix
+*.six
+*.zip
+*.tar
+*.tar.gz
+*.tgz
+*.7z
+*.rar
+
+# --- Test, coverage and scan output ----------------------------------------
+coverage/
+.nyc_output/
+*.lcov
+test-results/
+reports/
+cypress/screenshots/
+cypress/videos/
+playwright-report/
+blob-report/
+# Secret scanners write findings files; a scan dump is forensic material, not source.
+gitleaks-report.json
+gitleaks.sarif
+secrets-report.json
+detect-secrets/
+
+# --- Local verification scratch -------------------------------------------
+# The window suite and the layout probe both write into os.tmpdir(); anything a
+# developer points at a local path instead lands here.
+.vscode-test/
+.eis-verify/
+.eis-probe/
+tmp/
+temp/
+scratch/
+*.pid
+*.seed
+*.log
+npm-debug.log*
+yarn-error.log*
+pnpm-debug.log*
+
+# --- Editors, agents and operating systems ---------------------------------
+.DS_Store
+Thumbs.db
+desktop.ini
+$RECYCLE.BIN/
+.idea/
+*.swp
+*.swo
+.history/
+.qoder/
+.claude/
+.cursor/
+.freebuff/
+.windsurf/
+.aider*
+
+# --- Databases and data dumps ---------------------------------------------
+# The product has no database layer; these guard against a local experiment
+# leaving state behind in the tree.
+*.sqlite
+*.sqlite3
+*.db
+dump.sql
+*.bak
+*.orig
+*~
