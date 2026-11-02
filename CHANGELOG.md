@@ -235,13 +235,28 @@ published, because they reference the on-disk credential file and provider refus
   anything installed the web server's dependencies, and the gate's server group boots the real
   Express app. Reproduced locally by deleting `explain-it-simply-website/node_modules` from a clone
   (same failure, `Cannot find module 'dotenv'`), then fixed by installing the production tree of the
-  web server first. Independently confirmed on the runner: the corrected workflow's dependency audit
-  job completed with success on ubuntu-latest (run 41485402700), and its verify legs passed on
-  ubuntu-latest at Node 18.17, 20 and 22, on windows-latest and on macos-latest at Node 22 — which
-  is the first cross-platform, multi-version evidence this project has ever had, replacing five
-  failures. The new `ci` check fails if the gate ever moves ahead of that install again — putting
+  web server first. Confirmed on the runner: on run `41485402700` the dependency audit and four of
+  five verify legs then passed — ubuntu at Node 18.17, 20 and 22, and windows at 22 — replacing
+  five failures, while macOS still failed inside the gate. The full picture is in the next bullet.
+  The new `ci` check fails if the gate ever moves ahead of that install again
   the install back after the gate reports `CI installs what the gate boots before it runs the gate`
   at 10/11, exit 1, with the workflow restored byte-identically.
+
+- **The runner picture, as finally measured.** On run `41485402700` the ordering fix made the
+  dependency audit and four verify legs pass — ubuntu at 18.17, 20 and 22, and windows at 22 — while
+  macOS still failed inside the gate and the package job was cancelled at 31 minutes in an unbounded
+  download step. On the next run, `ddb58c2`, **all five verify legs and the audit passed**, including
+  macOS, and the package job failed fast (3m10s) in that same download step now that it is bounded. The
+  step was then made self-describing in `4792c3f`, which got past the download and failed later, at the
+  real-window suite.
+
+  So the first cross-platform evidence this project has ever produced is also its first flaky gate:
+  ubuntu 22 passed on `ddb58c2` and failed on `4792c3f` with nothing changed in what it executes, while
+  18.17, 20 and windows passed both times. The specific check cannot be named from outside a signed-in
+  session — job logs need authentication, and check-run annotations come back empty even though the step
+  emits them — and locally the gate ran 162/162 twice in a row, so nothing here reproduces it. **No
+  timeout was widened and no assertion relaxed to chase that red leg**; the cause is unknown, and
+  loosening a check to hide it is the failure mode this whole suite is built against.
 - **Line endings are pinned with `.gitattributes`.** Cloning the published repository on Windows
   produced a CRLF working tree while the snapshot directory held LF: two builds of one commit whose
   41 archive members are content-identical (all 41 normalised digests match) and whose raw bytes
