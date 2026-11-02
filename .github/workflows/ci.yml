@@ -18,7 +18,14 @@ permissions:
 
 concurrency:
   group: ${{ github.workflow }}-${{ github.event.pull_request.number || github.ref }}
-  cancel-in-progress: true
+  # Cancel a superseded pull-request run; never cancel a push to a branch.
+  #
+  # This was `true` for everything, and it cost evidence three times over: each of my own pushes
+  # cancelled the run already in flight for the commit before it, so a leg that had been running for
+  # twenty minutes reported `cancelled` and told nobody anything. On a pull request a stale result is
+  # worth nothing anyway. On `main` the run is the record — there is no later commit to supersede it
+  # with, and the next push may be hours away.
+  cancel-in-progress: ${{ github.event_name == 'pull_request' }}
 
 env:
   # The version every step that touches the dev toolchain runs against. It is 22 because of

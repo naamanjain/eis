@@ -592,13 +592,20 @@ async function checkCi() {
   });
 
   await check('no CI job is allowed to fail quietly', () => {
-    const blocks = ciJobBlocks(fs.readFileSync(CI_WORKFLOW, 'utf8'));
+    const text = fs.readFileSync(CI_WORKFLOW, 'utf8');
+    const blocks = ciJobBlocks(text);
     if (!blocks) fail('no jobs: block');
     for (const [name, lines] of Object.entries(blocks)) {
       const body = lines.join('\n');
       if (/continue-on-error/.test(body)) fail(`${name} uses continue-on-error — a failed check would report success`);
       if (!/timeout-minutes:/.test(body)) fail(`${name} has no timeout-minutes`);
     }
+    // A cancelled run leaves no evidence at all. Cancelling superseded pull-request runs is right;
+    // cancelling a push to a branch destroys the only record that commit ever produced.
+    const cancel = /^[ \t]*cancel-in-progress:\s*(.*)$/m.exec(text);
+    if (!cancel) fail('no cancel-in-progress setting to inspect');
+    else if (/^\s*true\s*$/.test(cancel[1])) fail('cancel-in-progress is unconditional: a push to main cancels the run that was producing evidence');
+    else if (!/pull_request/.test(cancel[1])) fail(`cancel-in-progress is gated on something other than a pull request: ${cancel[1].trim()}`);
   });
 
   // A bare `npm audit --audit-level=high` cannot express "this one advisory is a known
