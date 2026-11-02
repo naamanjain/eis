@@ -102,7 +102,7 @@ open proxy for your API key. Set `EIS_DAILY_REQUEST_CAP` if you expose it to any
 ## Test and verify
 
 ```bash
-npm run check          # 160 dependency-free checks in 11 groups; prints the live total
+npm run check          # 161 dependency-free checks in 11 groups; prints the live total
 npm run check -- --only secrets    # credential containment across files, history and package
 npm run check -- --only server     # boots the real Express app with a mocked transport
 npm run lint           # ESLint 9 over source, scripts, tests and the webview

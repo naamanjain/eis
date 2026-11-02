@@ -12,7 +12,7 @@ git log --oneline -5
 ```
 
 - [ ] Working tree is clean, or every uncommitted file is deliberately part of this release
-- [ ] `node scripts/check.js` — record the pass count printed, currently `160/160`
+- [ ] `node scripts/check.js` — record the pass count printed, currently `161/161`
 - [ ] `node scripts/check.js --only server`
 - [ ] `npm run vendor:check` — reports the number of synchronized files
 - [ ] `rm -rf node_modules && npm ci && npm ls --depth=0` — the lockfile installs reproducibly

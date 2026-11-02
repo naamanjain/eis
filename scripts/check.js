@@ -537,7 +537,33 @@ async function checkCi() {
     if (unpinned.length) fail(`not sha-pinned: ${unpinned.join(', ')}`);
   });
 
-  // The gate boots the real Express app, so it needs the web server's own dependencies installed
+  // A step with no clock is how a runner spends half an hour inside one line and reports it as
+  // "cancelled". The first real run of this workflow did exactly that on an unbounded download,
+  // and the failure was undiagnosable from outside a signed-in session.
+  await check('CI steps that wait on something outside the runner are bounded and self-reporting', () => {
+    const text = fs.readFileSync(CI_WORKFLOW, 'utf8');
+    const blocks = ciJobBlocks(text);
+    if (!blocks) fail('no jobs: block');
+    const steps = (blocks.verify || []).join('\n');
+    // The per-check annotation and the "nothing was named" fallback are different failures. A step
+    // that keeps only the fallback looks annotated and reports every real failure as one anonymous
+    // line, which is the blindness this step exists to remove.
+    if (!/::error::\$\{line\}/.test(steps)) fail('a named gate failure is not turned into an annotation, so a leg nobody can log into reports no diagnosis');
+    if (!/::error::the gate exited/.test(steps)) fail('the fallback annotation is missing, so an unnamed gate failure would vanish');
+    if (!/shell: bash/.test(steps)) fail('the gate step has no explicit shell, so each leg would run it with a different one');
+    if (!/tee /.test(steps)) fail('the gate output is not captured, so failures cannot be turned into annotations');
+
+    const pkg = (blocks.package || []).join('\n');
+    if (!/--max-time/.test(pkg)) fail('the editor download has no transfer ceiling');
+    if (!/--retry/.test(pkg)) fail('the editor download has no retry, so one stalled mirror fails the job');
+    if (!/timeout --preserve-status/.test(pkg)) fail('the editor is launched without a clock; a missing shared library hangs instead of naming itself');
+    const unbounded = ['Install the dev toolchain', 'Build the extension package', 'Real VS Code window against the working tree', 'Real VS Code window against the packaged artifact']
+      .filter((name) => !new RegExp(`- name: ${name}\\b[\\s\\S]{0,200}?timeout-minutes:`).test(pkg));
+    if (unbounded.length) fail(`package-job steps wait with no ceiling: ${unbounded.join(', ')}`);
+    const jobTimeout = /timeout-minutes:\s*(\d+)/.exec(pkg);
+    if (!jobTimeout || Number(jobTimeout[1]) < 35) fail(`the package job's outer timeout (${jobTimeout ? jobTimeout[1] : 'unset'}) is below the sum of its step ceilings`);
+  });
+
   // first. Locally that is always true and in CI it is only true if a step says so: the first real
   // run of this workflow failed every verify leg because the install came after the gate.
   await check('CI installs what the gate boots before it runs the gate', () => {

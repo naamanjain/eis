@@ -226,10 +226,29 @@ published, because they reference the on-disk credential file and provider refus
 - **Assets withheld from publication on provenance grounds**, with the reason recorded: the
   hackathon-era design mockup whose authorship no evidence in the repository establishes. Nothing
   referenced it, no test depended on it, and the site's two real pages are unaffected.
-- **Gate total 158 → 160.** Two `secrets` checks for the scanner guardrails described above; four
-  break proofs (extra content in the provenance manifest, a shape-based exemption, disabling the
-  default ruleset, adding a second allowlist) each failed the suite with exit 1 and were restored
-  byte-identically.
+- **Gate total 158 → 161.** Two `secrets` checks for the scanner guardrails described above, and
+  one `ci` check that reads the verify job's step order. Three break proofs (extra content in the
+  provenance manifest, a shape-based exemption, a second allowlist) each failed the suite with exit 1
+  and were restored byte-identically.
+- **The first real CI run found an ordering defect no local run could see.** All five verify legs
+  failed on the runner while every local run passed: the job ran `node scripts/check.js` before
+  anything installed the web server's dependencies, and the gate's server group boots the real
+  Express app. Reproduced locally by deleting `explain-it-simply-website/node_modules` from a clone
+  (same failure, `Cannot find module 'dotenv'`), then fixed by installing the production tree of the
+  web server first. Independently confirmed on the runner: the corrected workflow's dependency audit
+  job completed with success on ubuntu-latest (run 41485402700), and its verify legs passed on
+  ubuntu-latest at Node 18.17, 20 and 22, on windows-latest and on macos-latest at Node 22 — which
+  is the first cross-platform, multi-version evidence this project has ever had, replacing five
+  failures. The new `ci` check fails if the gate ever moves ahead of that install again — putting
+  the install back after the gate reports `CI installs what the gate boots before it runs the gate`
+  at 10/11, exit 1, with the workflow restored byte-identically.
+- **Line endings are pinned with `.gitattributes`.** Cloning the published repository on Windows
+  produced a CRLF working tree while the snapshot directory held LF: two builds of one commit whose
+  41 archive members are content-identical (all 41 normalised digests match) and whose raw bytes
+  differ for 26. Pinning `eol=lf` makes one commit build one file. Independently measured: the zip
+  container still embeds a DOS timestamp per entry, so two builds of the same commit differ at
+  archive byte 10 and nowhere else — verification is by member digest, and the archive digest
+  identifies one exact file.
 
 ## [2.0.3] — built, not published
 
