@@ -175,15 +175,26 @@ jobs:
         timeout-minutes: 12
         run: |
           set -euo pipefail
-          curl -fsSL --retry 3 --retry-all-errors --connect-timeout 15 --max-time 600 \
-            -o "$RUNNER_TEMP/code.tar.gz" https://update.code.visualstudio.com/latest/linux-x64/stable
+          if ! curl -fsSL --retry 3 --retry-all-errors --connect-timeout 15 --max-time 600 \
+               -o "$RUNNER_TEMP/code.tar.gz" https://update.code.visualstudio.com/latest/linux-x64/stable; then
+            echo "::error::the editor archive did not download; the packaging leg cannot run without it"
+            exit 1
+          fi
           mkdir -p "$RUNNER_TEMP/vscode"
           tar -xzf "$RUNNER_TEMP/code.tar.gz" -C "$RUNNER_TEMP/vscode"
-          test -x "$RUNNER_TEMP/vscode/VSCode-linux-x64/code"
-          echo "EIS_CODE_BIN=$RUNNER_TEMP/vscode/VSCode-linux-x64/code" >> "$GITHUB_ENV"
-          if ! timeout --preserve-status 180 xvfb-run -a "$RUNNER_TEMP/vscode/VSCode-linux-x64/code" --version; then
-            echo '::error::the editor binary would not print a version under Xvfb — missing shared libraries'
-            ldd "$RUNNER_TEMP/vscode/VSCode-linux-x64/code" | grep -i "not found" || echo "ldd reported no missing libraries; the launch itself hung"
+          # The directory inside the archive is not a stable name across releases, and a hardcoded
+          # guess fails here as a bare "test -x" with nothing to say. Search, then report what was
+          # actually unpacked if nothing matched.
+          BIN=$(find "$RUNNER_TEMP/vscode" -maxdepth 3 -type f -name code -perm -u+x | head -1)
+          if [ -z "$BIN" ]; then
+            echo "::error::no executable named 'code' inside the archive — unpacked layout follows"
+            find "$RUNNER_TEMP/vscode" -maxdepth 2 | sed 's/^/  /' | head -40
+            exit 1
+          fi
+          echo "EIS_CODE_BIN=$BIN" >> "$GITHUB_ENV"
+          if ! timeout --preserve-status 180 xvfb-run -a "$BIN" --version; then
+            echo "::error::the editor binary would not print a version under Xvfb ($BIN)"
+            ldd "$BIN" | grep -i "not found" || echo "ldd found no missing library; the launch itself hung"
             exit 1
           fi
 
