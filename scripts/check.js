@@ -537,6 +537,23 @@ async function checkCi() {
     if (unpinned.length) fail(`not sha-pinned: ${unpinned.join(', ')}`);
   });
 
+  // The gate boots the real Express app, so it needs the web server's own dependencies installed
+  // first. Locally that is always true and in CI it is only true if a step says so: the first real
+  // run of this workflow failed every verify leg because the install came after the gate.
+  await check('CI installs what the gate boots before it runs the gate', () => {
+    const blocks = ciJobBlocks(fs.readFileSync(CI_WORKFLOW, 'utf8'));
+    if (!blocks) fail('no jobs: block');
+    const verify = Object.entries(blocks).find(([name]) => /^verify$/.test(name));
+    if (!verify) fail('no verify job to inspect — the job names changed under this check');
+    const body = verify[1].join('\n');
+    const install = body.indexOf('npm ci --omit=dev');
+    const gate = body.indexOf('node scripts/check.js');
+    if (install < 0) fail('the verify job installs nothing for the web server, so the gate cannot boot the app');
+    if (gate < 0) fail('the verify job never runs the gate');
+    if (install >= 0 && gate >= 0 && install > gate) fail('the verify job runs the gate before installing the server runtime it boots');
+    if (!/working-directory:\s*explain-it-simply-website/.test(body)) fail('the runtime install does not run inside the web server project');
+  });
+
   await check('every command CI runs exists in this repository', () => {
     const text = fs.readFileSync(CI_WORKFLOW, 'utf8');
     const scripts = JSON.parse(fs.readFileSync(path.join(ROOT, 'package.json'), 'utf8')).scripts;

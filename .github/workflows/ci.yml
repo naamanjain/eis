@@ -83,6 +83,15 @@ jobs:
       - name: Report the runtime actually used
         run: node --version
 
+      - name: Install the web server runtime
+        # The gate boots the real Express app and reads its configuration module, so the server's
+        # own dependencies are inputs to verification — not something a later step may provide.
+        # This step was added because the first real CI run failed all five legs without it:
+        # locally a node_modules directory always exists, so the ordering bug was invisible until
+        # a runner started from a clean checkout.
+        working-directory: explain-it-simply-website
+        run: npm ci --omit=dev
+
       - name: Offline verification suite
         run: node scripts/check.js
 
