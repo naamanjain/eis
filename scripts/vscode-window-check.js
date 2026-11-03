@@ -160,19 +160,24 @@ function main() {
     }
     extensionPath = path.join(unzipped, 'extension');
     // Fail loudly on a missing file rather than letting the suite report a mystery crash.
+    // Names are matched against the archive's own index, case-folded: vsce writes the readme as
+    // extension/readme.md, and the check that ran on Windows happily found "README.md" there
+    // because the filesystem does not distinguish case. On the Linux runner the same assertion
+    // failed against a package that was complete. The archive is the authority, not the disk.
     const required = [
       'package.json', 'README.md', 'src/extension.js', 'src/panel.js', 'src/sidePanel.js',
       'webview/client.js', 'webview/styles.css', 'resources/sidebar.svg',
       'src/shared/index.js', 'src/shared/providers/registry.js', 'src/shared/audit/localFindings.js',
     ];
-    const missing = required.filter((rel) => !fs.existsSync(path.join(extensionPath, rel)));
+    const archiveNames = new Set(entries.map((entry) => entry.name.toLowerCase()));
+    const missing = required.filter((rel) => !archiveNames.has(('extension/' + rel).toLowerCase()));
     if (missing.length) {
       console.log(`EISFAIL driver :: ${vsix} is missing ${missing.join(', ')}`);
       console.log('EISDONE');
       process.exitCode = 1;
       return;
     }
-    if (fs.existsSync(path.join(extensionPath, 'src', 'test'))) {
+    if (entries.some((entry) => entry.name.toLowerCase().startsWith('extension/src/test/'))) {
       console.log('EISFAIL driver :: the .vsix ships src/test (excluded in .vscodeignore?)');
       console.log('EISDONE');
       process.exitCode = 1;

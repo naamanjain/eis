@@ -632,6 +632,11 @@ async function checkCi() {
     if (/spawnSync\('powershell/.test(driver)) fail('the packaged-artifact window leg needs PowerShell, which does not exist on the Linux runner');
     if (!/require\('\.\/verify-package\.js'\)/.test(driver)) fail('the packaged-artifact leg opens the .vsix with a platform tool instead of the repository zip reader');
     if (!/path-escaping entries/.test(driver)) fail('the packaged-artifact leg writes archive entries without checking their paths');
+    // vsce ships extension/readme.md; asserting "README.md" against the extracted tree passes on
+    // a case-insensitive filesystem and fails on the Linux runner. The archive index is the only
+    // thing that means the same thing on both.
+    if (!/archiveNames\.has\(\('extension\/' \+ rel\)\.toLowerCase\(\)\)/.test(driver)) fail('the packaged-artifact leg asserts required files against the extracted filesystem, whose case rules differ per platform');
+    if (/fs\.existsSync\(path\.join\(extensionPath, 'src', 'test'\)\)/.test(driver)) fail('the packaged-artifact leg decides whether tests shipped by looking at a case-sensitive directory');
   });
 
   await check('no CI job is allowed to fail quietly', () => {
