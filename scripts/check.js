@@ -3017,7 +3017,8 @@ async function main() {
       : '',
   });
 
-  const failed = results.filter((r) => !r.ok);  if (failed.length) {
+  const failed = results.filter((r) => !r.ok);
+  if (failed.length) {
     console.log('');
     console.log(`${failed.length} FAILED`);
     for (const item of failed) console.log(`  - ${item.name}\n      ${item.detail.split('\n').join('\n      ')}`);

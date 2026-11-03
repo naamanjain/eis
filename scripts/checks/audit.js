@@ -460,7 +460,36 @@ ${'const x = 1;\n'.repeat(200)}}` });
       assert.ok(!JSON.stringify(report).includes(['AIza', 'Z'.repeat(30)].join('')), 'a raw secret was copied into the report');
       assert.ok(report.diagnostics.length >= 2, 'findings were not converted to diagnostics');
       assert.ok(report.totals.estimatedTokens > 0, 'no token estimate for the send');
-      assert.ok(report.finishedAt > report.startedAt);
+      // Both stamps come from Date.now(), so a stubbed audit on a fast runner legitimately lands in
+      // the same millisecond: `>` was the wrong contract and failed one ubuntu-22 leg on
+      // 2026-11-02 (run 41496929800) while passing the same commit everywhere else. What has to
+      // hold is that the pair is ordered and that it MOVES when the work takes longer — asserted
+      // below against a deliberately slow read, which a bare `>` never proved.
+      assert.ok(Number.isFinite(report.startedAt) && Number.isFinite(report.finishedAt),
+        `timestamps are not both numbers: ${report.startedAt} / ${report.finishedAt}`);
+      assert.ok(report.finishedAt >= report.startedAt,
+        `the report finished before it started: ${report.startedAt} → ${report.finishedAt}`);
+
+      const slowRun = await (async () => {
+        const slowFs = {
+          statSync: (p) => {
+            const until = Date.now() + 6;
+            while (Date.now() < until) { /* make the clock move */ }
+            return fsStub.statSync(p);
+          },
+          readFile: (p) => fsStub.readFile(p),
+        };
+        const slowService = new loaded.projectAudit.ProjectAuditService({
+          vscode: stub, workspace, fs: slowFs, settings, ai,
+          logger: { appendLine: () => {} },
+          diagnosticsCollection: stub.languages.createDiagnosticCollection
+            ? stub.languages.createDiagnosticCollection()
+            : { set() {}, clear() {}, dispose() {} },
+        });
+        return slowService.audit({ scope: 'workspace' });
+      })();
+      assert.ok(slowRun.finishedAt > slowRun.startedAt,
+        `a six-millisecond-per-file scan reported no elapsed time: ${slowRun.startedAt} → ${slowRun.finishedAt}`);
 
       // Second run with one file edited: only that file is re-read.
       files['src/util.js'] = 'export const add = (a, b) => a + b;\n// touched\n';
