@@ -41,7 +41,11 @@ deploy step in this repository — the web app is meant to be run by whoever hos
 
 ## Install the extension
 
-From a published `.vsix` (the packaging route this repository uses — it is not on the Marketplace):
+From a published `.vsix` (the packaging route this repository uses — it is not on the Marketplace).
+The current release is [`v2.0.4`](https://github.com/naamanjain/eis/releases/tag/v2.0.4), whose
+`explain-it-simply-2.0.4.vsix` asset is `121,891` bytes with SHA-256
+`38f1dba9a08799c7ab420e0f802fb03e52c0a5d0c05357a4d7407dc74def4005`; the release also carries that
+checksum as a separate file, and the commit it was built from is named in the release body.
 
 ```bash
 code --install-extension explain-it-simply-2.0.4.vsix
