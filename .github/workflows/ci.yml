@@ -193,15 +193,19 @@ jobs:
           # guess fails here as a bare "test -x" with nothing to say. Search, then report what was
           # actually unpacked if nothing matched.
           #
-          # Two files in the archive are named `code`: the application binary and bin/code, a
-          # shell wrapper that runs the CLI. The wrapper answered `--version`, so this step passed,
-          # and the window step then exited 0 in one second with no window and no markers. Pick the
-          # one that is not a script and say which was skipped.
+          # Two files in the archive are named `code`: the application binary, and bin/code, a
+          # shell wrapper that starts the CLI. Both symptoms came from using the wrong one — the
+          # wrapper as the window target (it answers --version, then exits 0 without a window) and
+          # the binary as the --version probe (it opens a workbench and sits until its ceiling).
+          # So: the binary is the window target, the wrapper is what answers a flag, and the
+          # libraries are checked with ldd, which cannot hang.
           find "$RUNNER_TEMP/vscode" -maxdepth 3 -type f -name code -perm -u+x > "$RUNNER_TEMP/code-candidates"
           BIN=""
+          CLI=""
           while IFS= read -r CAND; do
             if [ "$(head -c 2 "$CAND" | tr -d '\n')" = '#!' ]; then
-              echo "skipping launcher wrapper (runs the CLI, never a window): $CAND"
+              echo "command-line entry (a script; never the window target): $CAND"
+              if [ -z "$CLI" ]; then CLI="$CAND"; fi
             elif [ -z "$BIN" ]; then
               BIN="$CAND"
             fi
@@ -211,11 +215,21 @@ jobs:
             find "$RUNNER_TEMP/vscode" -maxdepth 2 | sed 's/^/  /' | head -40
             exit 1
           fi
-          echo "selected editor binary: $BIN"
+          echo "application binary: $BIN"
           echo "EIS_CODE_BIN=$BIN" >> "$GITHUB_ENV"
-          if ! timeout --preserve-status 180 xvfb-run -a "$BIN" --version; then
-            echo "::error::the editor binary would not print a version under Xvfb ($BIN)"
-            ldd "$BIN" | grep -i "not found" || echo "ldd found no missing library; the launch itself hung"
+          # Shared libraries are checked without launching: a missing library names itself here
+          # instead of showing up as a suite that never starts.
+          MISSING=$(ldd "$BIN" 2>/dev/null | awk '/not found/ {print $1}' | sort -u | head -5)
+          if [ -n "$MISSING" ]; then
+            echo "::error::the editor binary cannot load: $MISSING"
+            exit 1
+          fi
+          # --version is answered by the CLI entry, not by the application binary: given a flag the
+          # binary starts the whole workbench, prints nothing, and sits until its ceiling expires.
+          # The window legs below are what prove the binary opens a window.
+          if [ -z "$CLI" ]; then CLI="$BIN"; fi
+          if ! timeout --preserve-status 120 xvfb-run -a "$CLI" --version; then
+            echo "::error::the editor command line did not answer --version under Xvfb ($CLI)"
             exit 1
           fi
 

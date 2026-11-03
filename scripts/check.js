@@ -618,7 +618,13 @@ async function checkCi() {
     if (!/head -c 2 "\$CAND" \| tr -d '\\n'\)" = '#!' \]/.test(text)) fail('the CI download step does not compare the file header to a shebang, so the CLI wrapper is still chosen over the application binary');
     if (!/" = '#!' \]; then[\s\S]{0,240}?elif \[ -z "\$BIN" \]; then[\s\S]{0,80}?BIN="\$CAND"/.test(text)) fail('the CI download step tests the header but does not branch on it into the binary it selects');
     if (!/done < "\$RUNNER_TEMP\/code-candidates"/.test(text)) fail('the CI download step does not read the candidate list it wrote');
-    if (!/skipping launcher wrapper/.test(text)) fail('the CI download step rejects a candidate without naming which one it skipped');
+    if (!/EIS_CODE_BIN=\$BIN/.test(text)) fail('the CI download step hands the window legs something other than the application binary it selected');
+    if (!/command-line entry \(a script; never the window target\)/.test(text)) fail('the CI download step silently drops the second file named code');
+    // The binary hung on --version because only the CLI entry answers it; the probe has to sit
+    // on $CLI, and the library check has to be something that cannot hang.
+    if (!/xvfb-run -a "\$CLI" --version/.test(text)) fail('the CI download step probes the application binary with --version, which opens a workbench instead of answering');
+    if (/xvfb-run -a "\$BIN"/.test(text)) fail('the CI download step launches the application binary under Xvfb, which hangs: only the CLI entry answers a flag');
+    if (!/ldd "\$BIN"[\s\S]{0,120}?not found/.test(text)) fail('the CI download step has a library check that can only be seen by launching the editor');
     const driver = fs.readFileSync(path.join(ROOT, 'scripts', 'vscode-window-check.js'), 'utf8').replace(/\r\n/g, String.fromCharCode(10));
     if (!/'#!'\) return 'script'/.test(driver)) fail('the window driver does not classify a shebang file as a script');
     if (!/kind === 'script'/.test(driver)) fail('the window driver has no refusal for a launcher script');
