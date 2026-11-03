@@ -192,12 +192,26 @@ jobs:
           # The directory inside the archive is not a stable name across releases, and a hardcoded
           # guess fails here as a bare "test -x" with nothing to say. Search, then report what was
           # actually unpacked if nothing matched.
-          BIN=$(find "$RUNNER_TEMP/vscode" -maxdepth 3 -type f -name code -perm -u+x | head -1)
+          #
+          # Two files in the archive are named `code`: the application binary and bin/code, a
+          # shell wrapper that runs the CLI. The wrapper answered `--version`, so this step passed,
+          # and the window step then exited 0 in one second with no window and no markers. Pick the
+          # one that is not a script and say which was skipped.
+          find "$RUNNER_TEMP/vscode" -maxdepth 3 -type f -name code -perm -u+x > "$RUNNER_TEMP/code-candidates"
+          BIN=""
+          while IFS= read -r CAND; do
+            if [ "$(head -c 2 "$CAND" | tr -d '\n')" = '#!' ]; then
+              echo "skipping launcher wrapper (runs the CLI, never a window): $CAND"
+            elif [ -z "$BIN" ]; then
+              BIN="$CAND"
+            fi
+          done < "$RUNNER_TEMP/code-candidates"
           if [ -z "$BIN" ]; then
-            echo "::error::no executable named 'code' inside the archive — unpacked layout follows"
+            echo "::error::no application binary named 'code' inside the archive — unpacked layout follows"
             find "$RUNNER_TEMP/vscode" -maxdepth 2 | sed 's/^/  /' | head -40
             exit 1
           fi
+          echo "selected editor binary: $BIN"
           echo "EIS_CODE_BIN=$BIN" >> "$GITHUB_ENV"
           if ! timeout --preserve-status 180 xvfb-run -a "$BIN" --version; then
             echo "::error::the editor binary would not print a version under Xvfb ($BIN)"

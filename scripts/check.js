@@ -8,6 +8,7 @@
 const assert = require('assert');
 const fs = require('fs');
 const http = require('http');
+const os = require('os');
 const path = require('path');
 const Module = require('module');
 const { spawn, spawnSync } = require('child_process');
@@ -589,6 +590,42 @@ async function checkCi() {
     for (const file of new Set([...text.matchAll(/node (scripts\/[A-Za-z0-9._/-]+\.js)/g)].map((match) => match[1]))) {
       if (!fs.existsSync(path.join(ROOT, ...file.split('/')))) fail(`${file} does not exist`);
     }
+  });
+
+  await check('the window driver refuses a planted launcher script', () => {
+    // Executed, not grepped. bin/code in the Linux archive begins with '#!' and runs the CLI:
+    // it answers --version, then exits 0 with no window and no markers, which the driver
+    // reported as "0 passed, 0 failed" with no reason. The shebang is checked before anything
+    // launches, so this needs no desktop and opens no window.
+    const wrapper = path.join(os.tmpdir(), 'eis-fake-code-wrapper-' + process.pid + '.sh');
+    fs.writeFileSync(wrapper, '#!/bin/sh' + String.fromCharCode(10) + 'echo 1.0.0' + String.fromCharCode(10));
+    let result;
+    try {
+      result = sh('node', ['scripts/vscode-window-check.js'], { env: { ...process.env, EIS_CODE_BIN: wrapper } });
+    } finally {
+      fs.rmSync(wrapper, { force: true });
+    }
+    const out = result.stdout + result.stderr;
+    if (result.code === 0) fail('the window driver exited 0 for a launcher script — that is the CLI wrapper passing itself off as a window');
+    if (!/launcher script/.test(out)) fail('the window driver refused a launcher script without naming what it was: ' + out.slice(0, 120).replace(/\s+/g, ' '));
+    if (!/EISDONE/.test(out)) fail('the window driver refused without the done marker, so the CI step can only report a bare exit code');
+  });
+
+  await check('the editor leg tells the application binary from the CLI wrapper', () => {
+    const text = fs.readFileSync(CI_WORKFLOW, 'utf8').replace(/\r\n/g, String.fromCharCode(10));
+    // Reading a header is not a decision: the assertions below require the header test and the
+    // branch that follows it, because the defect was choosing bin/code on a name match alone.
+    if (!/head -c 2 "\$CAND" \| tr -d '\\n'\)" = '#!' \]/.test(text)) fail('the CI download step does not compare the file header to a shebang, so the CLI wrapper is still chosen over the application binary');
+    if (!/" = '#!' \]; then[\s\S]{0,240}?elif \[ -z "\$BIN" \]; then[\s\S]{0,80}?BIN="\$CAND"/.test(text)) fail('the CI download step tests the header but does not branch on it into the binary it selects');
+    if (!/done < "\$RUNNER_TEMP\/code-candidates"/.test(text)) fail('the CI download step does not read the candidate list it wrote');
+    if (!/skipping launcher wrapper/.test(text)) fail('the CI download step rejects a candidate without naming which one it skipped');
+    const driver = fs.readFileSync(path.join(ROOT, 'scripts', 'vscode-window-check.js'), 'utf8').replace(/\r\n/g, String.fromCharCode(10));
+    if (!/'#!'\) return 'script'/.test(driver)) fail('the window driver does not classify a shebang file as a script');
+    if (!/kind === 'script'/.test(driver)) fail('the window driver has no refusal for a launcher script');
+    if (!/if \(process\.env\.EIS_CODE_BIN\) \{/.test(driver)) fail('the window driver ignores a wrong EIS_CODE_BIN by quietly substituting a discovered editor');
+    if (/spawnSync\('powershell/.test(driver)) fail('the packaged-artifact window leg needs PowerShell, which does not exist on the Linux runner');
+    if (!/require\('\.\/verify-package\.js'\)/.test(driver)) fail('the packaged-artifact leg opens the .vsix with a platform tool instead of the repository zip reader');
+    if (!/path-escaping entries/.test(driver)) fail('the packaged-artifact leg writes archive entries without checking their paths');
   });
 
   await check('no CI job is allowed to fail quietly', () => {
