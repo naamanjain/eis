@@ -250,13 +250,42 @@ published, because they reference the on-disk credential file and provider refus
   step was then made self-describing in `4792c3f`, which got past the download and failed later, at the
   real-window suite.
 
-  So the first cross-platform evidence this project has ever produced is also its first flaky gate:
-  ubuntu 22 passed on `ddb58c2` and failed on `4792c3f` with nothing changed in what it executes, while
-  18.17, 20 and windows passed both times. The specific check cannot be named from outside a signed-in
-  session — job logs need authentication, and check-run annotations come back empty even though the step
-  emits them — and locally the gate ran 162/162 twice in a row, so nothing here reproduces it. **No
-  timeout was widened and no assertion relaxed to chase that red leg**; the cause is unknown, and
-  loosening a check to hide it is the failure mode this whole suite is built against.
+  Two of those results were written up at the time as unexplained, and they were: the job logs need
+  authentication, and check-run annotations came back empty. Once the logs were readable with the
+  repository's own credential — never printed, used only to name a failing check — both causes were
+  ordinary defects, and neither was silenced by loosening a test.
+
+  - The red ubuntu-22 leg on `4792c3f` (run `41496929800`) was `audit: audit runs against a stubbed
+    workspace end to end`, on `assert.ok(report.finishedAt > report.startedAt)`. Both stamps come from
+    `Date.now()`, so a stubbed audit that finishes inside the same millisecond fails there and passes on
+    every other machine — which is exactly what the five later runs did. The assertion has been
+    replaced with the contract the product actually has: the pair is ordered, and elapsed time
+    **moves**, proved against a deliberately slow scan where the old `>` would also have passed a
+    hardcoded value. Break-proved both ways: pinning `finishedAt` to `startedAt` fails the elapsed-time
+    half, and setting it five milliseconds earlier fails the ordering half.
+  - The packaging leg failed in one second because the Linux archive holds **two** files named `code`.
+    The download step took `bin/code`, a shell wrapper that starts the CLI: it answers `--version` (so
+    the step that checks the editor starts passed) and exits 0 with no window, so the window step
+    reported `0 passed, 0 failed` and nothing about why. Selecting the application binary by its header
+    then moved the failure to the probe, because `--version` against the binary opens a workbench and
+    sits until its ceiling. Each file now does what it is for — the binary is `EIS_CODE_BIN` and the
+    window target, the wrapper answers `--version`, and the shared libraries are checked with `ldd`,
+    which cannot hang.
+  - That exposed a third defect the same run could not have shown on Windows: the packaged leg asserted
+    `README.md` against the extracted tree, and vsce ships `readme.md`. A case-insensitive filesystem
+    returned the file; the Linux runner did not. Package contents are now asserted against the archive
+    index, case-folded, so the assertion means the same thing on both.
+
+  My own pushes were also destroying evidence: `cancel-in-progress: true` applied to pushes as well as
+  pull requests, so each commit cancelled the run for the one before it and a macOS leg that had been
+  going for twenty minutes reported `cancelled` — which is not a result. Cancellation is now limited to
+  superseded pull-request runs, and the gate rejects an unconditional setting.
+
+  Run `41696231574`, at commit `d46ca94`, is the first fully green run this workflow has produced: the
+  dependency audit, all five verify legs (macOS, Windows, and ubuntu at 18.17, 20 and 22), and the
+  package job with **both** real-window legs and the artifact upload — 8 jobs, every step. The window
+  suite has never run on macOS or Windows CI; that leg is Linux under Xvfb and is not claimed as
+  cross-platform coverage.
 - **Line endings are pinned with `.gitattributes`.** Cloning the published repository on Windows
   produced a CRLF working tree while the snapshot directory held LF: two builds of one commit whose
   41 archive members are content-identical (all 41 normalised digests match) and whose raw bytes

@@ -12,7 +12,7 @@ git log --oneline -5
 ```
 
 - [ ] Working tree is clean, or every uncommitted file is deliberately part of this release
-- [ ] `node scripts/check.js` — record the pass count printed, currently `162/162`
+- [ ] `node scripts/check.js` — record the pass count printed, currently `164/164`
 - [ ] `node scripts/check.js --only server`
 - [ ] `npm run vendor:check` — reports the number of synchronized files
 - [ ] `rm -rf node_modules && npm ci && npm ls --depth=0` — the lockfile installs reproducibly
@@ -111,7 +111,17 @@ These are owner actions and are not performed by an agent without authorization.
       shows exactly that tag on the commit that was verified
 - [ ] `main` on the remote is the commit that was verified — checked with
       `git rev-parse HEAD` against `git ls-remote origin main`, not assumed
-- [ ] CI is green on the pushed commit, including the `All required checks` job
+- [ ] CI is green on the pushed commit, including the `All required checks` job.
+      Measured on run `41696231574` (commit `d46ca94`): 8 jobs, every step, including both
+      real-window legs. A green run is a property of the commit it ran on — re-check it on
+      whichever commit is actually being released, and read the per-job conclusions rather
+      than the run badge.
+- [ ] The tag for the version points at a commit whose **shipped** source is the one in the
+      artifact. `v2.0.4` points at `de20eaa`; everything after it in this branch touched CI,
+      the local gate and documentation only, which `git diff --name-only v2.0.4..HEAD` proves
+      by naming no file under `explain-it-simply-vs-code-extension/`, `shared/` or
+      `explain-it-simply-website/`. Moving a published tag is a rewrite: don't do it to make
+      this line read better — record what the tag points at instead.
 - [ ] The `.vsix` from CI's artifact is the one published, or `vsce publish` run from the
       same commit
 - [ ] Extension Marketplace listing matches what the code actually does
