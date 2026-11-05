@@ -30,11 +30,12 @@ release and no new artifact** — the published `explain-it-simply-2.0.4.vsix` a
   ESLint's 3.1.5 copies across two majors, and 3 → 11 changes the export shape that `eslint`,
   `@eslint/config-array` and `@eslint/eslintrc` import.
 - The major jump that is taken was verified on behaviour, not on the changelog. vsce's whole use of
-  the library is `minimatch(path, pattern, { dot: true })` at three call sites in `out/package.js`;
-  minimatch 11's removals (`makeRe`, `Minimatch#regexp`, `MMRegExp`, the `AST` class,
-  `maxExtglobRecursion`, `debug`) are used nowhere in it. The extension was then packaged under 10.2.6
-  and under 11.0.4 and compared member by member: **all 41 archive members identical by content
-  digest**, so the build product did not change.
+  the library is `minimatch(path, pattern, { dot: true })` at four call sites in `out/package.js` —
+  lines 1377, 1378, 1636 and 1642 of the installed 4.1.0, counted from `minimatch_1.minimatch(`
+  occurrences; an earlier draft of these notes said three. Minimatch 11's removals (`makeRe`,
+  `Minimatch#regexp`, `MMRegExp`, the `AST` class, `maxExtglobRecursion`, `debug`) are used nowhere in
+  it. The extension was then packaged under 10.2.6 and under 11.0.4 and compared member by member:
+  **all 41 archive members identical by content digest**, so the build product did not change.
 - The audit policy's stale-id rule is what proved the removal. With the override in place and the
   carve-out still written, `npm run audit` failed with `carve-out GHSA-g3hv-75wg-m249 is stale` while
   `npm audit --json` counted `total: 0` — a suppressed finding cannot produce that pair of results.

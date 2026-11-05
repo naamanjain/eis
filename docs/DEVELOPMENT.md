@@ -98,8 +98,9 @@ and `TOLERATED_DEV` in `scripts/audit-policy.js` is empty as a result. What was 
   a global one would drag ESLint's `minimatch@3.1.5` (declared by eslint, `@eslint/config-array` and
   `@eslint/eslintrc`) from 3.x to 11.x across an export-shape change those packages import.
 - The major jump that *is* taken was checked rather than assumed. vsce's entire use of the library is
-  `minimatch(path, pattern, { dot: true })` at three call sites in `out/package.js` — a named function
-  export plus a core option, both still present in 11.x. Minimatch 11's removals (`makeRe`,
+  `minimatch(path, pattern, { dot: true })` — four call sites in `out/package.js`, at lines 1377, 1378,
+  1636 and 1642, counting `minimatch_1.minimatch(` occurrences in the installed 4.1.0 — a named
+  function export plus a core option, both still present in 11.x. Minimatch 11's removals (`makeRe`,
   `Minimatch#regexp`, `MMRegExp`, the `AST` class, `maxExtglobRecursion`, `debug`) appear nowhere in it,
   and its matching-semantics changes were tested on the output: the extension was packaged under
   10.2.6 and under 11.0.4 and all **41 archive members matched by content digest**, so the produced
