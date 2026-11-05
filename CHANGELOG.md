@@ -9,6 +9,45 @@ reconstructed here; guessing which change shipped in which release would be inve
 The first tag in this repository is `v2.0.4`. Entries are written from work that can be pointed at
 in the tree or in a report.
 
+## [Unreleased]
+
+Build toolchain and verification only. No file the extension ships changed, so this produces **no new
+release and no new artifact** — the published `explain-it-simply-2.0.4.vsix` and its checksum stand.
+
+### Fixed
+
+- **`GHSA-g3hv-75wg-m249` / CVE-2026-118764 is resolved, not re-suppressed.** The advisory covers
+  `minimatch >= 7.0.0, < 11.0.1`, and the only install inside that range was the `minimatch@10.2.6`
+  that `@vscode/vsce@4.1.0` pulls — `npm ls minimatch` shows the three `minimatch@3.1.5` copies under
+  ESLint sitting below the range, so they were never affected despite what the old carve-out said.
+  Root `package.json` now declares `overrides: { "@vscode/vsce": { "minimatch": "^11.0.1" } }`, which
+  resolves to **11.0.4**, and the exception entry is deleted rather than left behind.
+- Why no upgrade was available first: vsce 4.1.0 is the current release and still declares `^10.2.6`;
+  ESLint 10.14.0 declares `^10.2.6` as well, so adopting it would have **added** an affected copy
+  where there were none. npm's own `fixAvailable` offered a semver-major downgrade to vsce 3.9.1,
+  which would also have undone the `@azure/msal-node` fix that 4.1.0 brought. Both rejected.
+- The override is scoped rather than global on purpose. A global `minimatch` override would force
+  ESLint's 3.1.5 copies across two majors, and 3 → 11 changes the export shape that `eslint`,
+  `@eslint/config-array` and `@eslint/eslintrc` import.
+- The major jump that is taken was verified on behaviour, not on the changelog. vsce's whole use of
+  the library is `minimatch(path, pattern, { dot: true })` at three call sites in `out/package.js`;
+  minimatch 11's removals (`makeRe`, `Minimatch#regexp`, `MMRegExp`, the `AST` class,
+  `maxExtglobRecursion`, `debug`) are used nowhere in it. The extension was then packaged under 10.2.6
+  and under 11.0.4 and compared member by member: **all 41 archive members identical by content
+  digest**, so the build product did not change.
+- The audit policy's stale-id rule is what proved the removal. With the override in place and the
+  carve-out still written, `npm run audit` failed with `carve-out GHSA-g3hv-75wg-m249 is stale` while
+  `npm audit --json` counted `total: 0` — a suppressed finding cannot produce that pair of results.
+- **A new gate assertion, and two corrected ones** (164 → 165). `node scripts/check.js` now reads `package-lock.json` and
+  fails if any `minimatch` install lands in `>= 7.0.0, < 11.0.1`, if the override is global, if
+  `overrides` grows a second key, or if it stops requiring 11.x; a lockfile with no minimatch at all
+  fails as a check that proved nothing. The older assertion that the policy "names an advisory id"
+  was corrected, since an empty exception list is the goal — it now checks that advisory ids can be
+  extracted and that any carve-out present carries id, package, chain and reason.
+- Corrected in `README.md`, `docs/DEVELOPMENT.md`, `docs/RELEASE_CHECKLIST.md` and the policy comments:
+  the installed ESLint is **9.39.5**, not the 10.14.0 those texts claimed, and ESLint was named as
+  part of the vulnerable chain when its resolved copies sit outside the advisory range.
+
 ## [2.0.4] — 2026-11-02
 
 The first release published from this repository. It is the 2.0.3 build plus everything recorded

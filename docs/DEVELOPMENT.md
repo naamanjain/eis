@@ -83,13 +83,36 @@ one was genuinely fixed: `@vscode/vsce` 4.0.0 → 4.1.0 pulled `@azure/identity`
 accepts a patched `@azure/msal-node`, so `GHSA-xcx6-jx8p-x3h5` left the tree and its carve-out was
 deleted rather than left behind.
 
-What is carried instead today is `GHSA-g3hv-75wg-m249` (`minimatch`, moderate, fixed in 11.0.1),
-reachable only through ESLint and `@vscode/vsce` — both declare `minimatch ^10.2.6`, current ESLint
-10.14.0 included, so no compatible upgrade exists. Forcing 11.x through `overrides` would be an
-unverified major jump under a lint and packaging API and is a release decision, not an install-time
-convenience. It must particularly not be done by declaring the package in root `dependencies`: that is
-a **production** dependency of the repository, not a dev pin, and a previous attempt did exactly that
-while leaving the vulnerable nested copy untouched.
+The advisory this repository used to carry, `GHSA-g3hv-75wg-m249` / CVE-2026-118764 (`minimatch`
+>= 7.0.0, < 11.0.1, moderate, denial of service through glob-pattern amplification), is **resolved**,
+and `TOLERATED_DEV` in `scripts/audit-policy.js` is empty as a result. What was ruled out first:
+
+- `@vscode/vsce` 4.1.0 is the current release and still declares `minimatch ^10.2.6`; ESLint's latest
+  10.14.0 declares `^10.2.6` too, and `@eslint/config-array` 0.23.5 declares `^10.2.4`. No upstream
+  bump removes the affected copy — and moving ESLint to 10.x would **replace three unaffected 3.1.5
+  installs with an affected 10.x**, which is the opposite of a fix.
+- npm's own `fixAvailable` is `@vscode/vsce@3.9.1`, a semver-major **downgrade** that would also undo
+  the `@azure/msal-node` fix 4.1.0 brought. Rejected.
+- What remains is the narrow option: root `package.json` declares
+  `overrides: { "@vscode/vsce": { "minimatch": "^11.0.1" } }`, resolving to 11.0.4. Scoped, not global:
+  a global one would drag ESLint's `minimatch@3.1.5` (declared by eslint, `@eslint/config-array` and
+  `@eslint/eslintrc`) from 3.x to 11.x across an export-shape change those packages import.
+- The major jump that *is* taken was checked rather than assumed. vsce's entire use of the library is
+  `minimatch(path, pattern, { dot: true })` at three call sites in `out/package.js` — a named function
+  export plus a core option, both still present in 11.x. Minimatch 11's removals (`makeRe`,
+  `Minimatch#regexp`, `MMRegExp`, the `AST` class, `maxExtglobRecursion`, `debug`) appear nowhere in it,
+  and its matching-semantics changes were tested on the output: the extension was packaged under
+  10.2.6 and under 11.0.4 and all **41 archive members matched by content digest**, so the produced
+  `.vsix` is the same product. Engines moved to `20 || >=22`, which every CI leg that installs the
+  toolchain satisfies — the two `toolchain: false` legs never run `npm ci`.
+- `node scripts/check.js` asserts the resolved state from `package-lock.json` itself: no `minimatch`
+  install may sit in >= 7.0.0, < 11.0.1, the override must stay scoped to `@vscode/vsce` and must still
+  require 11.x, and a lockfile containing no minimatch at all is reported as a check that proved
+  nothing.
+
+One thing that must not happen again: closing an advisory by adding the package to root
+`dependencies`. That makes it a **production** dependency of the repository while leaving the
+vulnerable nested copy untouched — a previous attempt did exactly that.
 
 ## Secret scanning
 

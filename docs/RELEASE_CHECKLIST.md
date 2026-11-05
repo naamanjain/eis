@@ -88,10 +88,13 @@ release notes instead of leaving it unstated.
       into the release notes with its severity
 - [ ] `npm run audit` at the root (after `npm ci`) — `scripts/audit-policy.js`: production must be
       clean at any severity, and every dev-only advisory at any severity must be named there. As of
-      2.0.4 it passes carrying one named limitation, `GHSA-g3hv-75wg-m249` (`minimatch`, moderate,
-      dev-only, no compatible upgrade because both consumers declare `^10.2.6`), which must appear in
-      the release notes with that wording rather than as resolved. A named id that npm no longer
-      reports is itself a failure, so the entry cannot outlive the advisory.
+      2.0.4 it passed carrying one named limitation, `GHSA-g3hv-75wg-m249` (`minimatch` >= 7.0.0,
+      < 11.0.1), which has since been **resolved** by an `overrides` entry scoped to
+      `@vscode/vsce` — so the list is empty and a clean `npm run audit` is the expected result, not a
+      tolerated finding. A named id that npm no longer reports is itself a failure, and that rule is
+      what proved the dependency had actually left the tree. If a future carve-out is unavoidable it
+      must carry id, package, chain and reason, and the release notes must name it as an open
+      limitation rather than as resolved.
 - [ ] `.env`, keys and local paths are absent from the `.vsix` (`verify:package` asserts this)
 - [ ] Past incidents restated in the release notes, not summarized away. `.github/SECURITY.md` is
       the published disclosure for this repository: it states what was exposed in the earlier private
