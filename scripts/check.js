@@ -592,6 +592,34 @@ async function checkCi() {
     }
   });
 
+  await check('no installed dependency sits inside a known vulnerable range', () => {
+    // Read from the lockfile rather than from the audit policy's prose: an exception entry can be
+    // deleted or reworded, but the resolved versions are what actually get installed.
+    const lock = JSON.parse(fs.readFileSync(path.join(ROOT, 'package-lock.json'), 'utf8'));
+    const manifest = JSON.parse(fs.readFileSync(path.join(ROOT, 'package.json'), 'utf8'));
+    const compare = (a, b) => {
+      const x = String(a).split('.').map(Number);
+      const y = String(b).split('.').map(Number);
+      for (let i = 0; i < 3; i += 1) { if ((x[i] || 0) !== (y[i] || 0)) return (x[i] || 0) - (y[i] || 0); }
+      return 0;
+    };
+    // GHSA-g3hv-75wg-m249 / CVE-2026-118764: vulnerable >= 7.0.0 and < 11.0.1, patched in 11.0.1.
+    const vulnerable = (v) => compare(v, '7.0.0') >= 0 && compare(v, '11.0.1') < 0;
+    const installs = Object.entries(lock.packages || {}).filter(([where]) => /(^|\/)node_modules\/minimatch$/.test(where));
+    if (!installs.length) fail('the lockfile installs no minimatch anywhere, so this range check proved nothing');
+    for (const [where, meta] of installs) {
+      if (vulnerable(meta.version)) fail(`${where} resolves to minimatch ${meta.version}, inside the range GHSA-g3hv-75wg-m249 covers`);
+    }
+    // The override that closed the advisory has to stay narrow. A global minimatch override would
+    // drag ESLint's three unaffected 3.1.5 copies across two majors, and 3 -> 11 changes the export
+    // shape that eslint, @eslint/config-array and @eslint/eslintrc import.
+    const keys = Object.keys(manifest.overrides || {});
+    if (keys.includes('minimatch')) fail('minimatch is overridden globally instead of under @vscode/vsce — ESLint resolves an unaffected 3.1.5 and must keep its own copy');
+    if (keys.some((key) => key !== '@vscode/vsce')) fail(`overrides carries ${keys.join(', ')}; only the @vscode/vsce scope is reviewed here`);
+    const pinned = (manifest.overrides || {})['@vscode/vsce'] || {};
+    if (!/^\^11\./.test(String(pinned.minimatch || ''))) fail('the @vscode/vsce override no longer requires minimatch 11.x, so the advisory range is back');
+  });
+
   await check('the window driver refuses a planted launcher script', () => {
     // Executed, not grepped. bin/code in the Linux archive begins with '#!' and runs the CLI:
     // it answers --version, then exits 0 with no window and no markers, which the driver
@@ -669,7 +697,14 @@ async function checkCi() {
       fail('CI still runs a bare --audit-level audit: it would fail on the named dev-only advisory');
     }
     const policy = fs.readFileSync(path.join(ROOT, 'scripts', 'audit-policy.js'), 'utf8');
-    if (!/GHSA-[a-z0-9-]{4,}/.test(policy)) fail('the policy names no advisory id, so nothing is tracked as tolerated');
+    // Not "the policy names an advisory" — an empty carve-out list is the goal, so what has to be
+    // provable is that ids can be read at all, and that any carve-out which does exist is complete.
+    if (!/GHSA-\[a-z0-9-\]\{4,\}/.test(policy)) fail('the policy cannot extract advisory ids, so an unnamed advisory would be invisible');
+    if (/TOLERATED_DEV = \[\s*\{/.test(policy)) {
+      for (const field of ['id:', 'pkg:', 'chain:', 'reason:']) {
+        if (!policy.includes(field)) fail(`a tolerated advisory is declared without ${field.replace(':', '')} — name the reason or fix it`);
+      }
+    }
     if (!/is stale/.test(policy)) fail('the policy never fails when a tolerated advisory disappears');
     if (!/--omit=dev/.test(policy)) fail('the policy does not audit the production tree on its own');
     if (!/blocked/.test(policy)) fail('the policy cannot tell an audit that failed from an audit that found nothing');

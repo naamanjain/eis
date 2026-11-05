@@ -24,20 +24,23 @@ const ROOT = path.join(__dirname, '..');
 
 // Dev-only advisories carried as known limitations, each with the reason it is not fixable from
 // inside this repository. Deleting a line here is how the next owner learns it got fixed; the check
-// fails if the line stays after npm stops reporting it.
-const TOLERATED_DEV = [
-  {
-    id: 'GHSA-g3hv-75wg-m249',
-    pkg: 'minimatch',
-    chain: 'eslint + @vscode/vsce -> minimatch',
-    reason:
-      'DoS via glob-pattern amplification, moderate, fixed in minimatch 11.0.1. No consumer can ' +
-      'reach it: @vscode/vsce 4.1.0 declares minimatch ^10.2.6 and so does the current eslint ' +
-      '10.14.0, so an 11.x line would be a forced override of a toolchain glob API. Dev-only — ' +
-      'minimatch is reached by lint and packaging, never by the extension or the web server. ' +
-      'Recheck when either consumer moves to minimatch 11.',
-  },
-];
+// below fails if a line stays after npm stops reporting it.
+//
+// Empty as of 2026-11-06, which is the point of the stale-id rule. The entry this held was
+// GHSA-g3hv-75wg-m249 / CVE-2026-118764 (minimatch >= 7.0.0, < 11.0.1, moderate, denial of service
+// through glob-pattern amplification), and npm stopped reporting it once the copy @vscode/vsce
+// resolves was pinned to 11.x by the scoped override in the root package.json. The policy failing on
+// its own leftover carve-out is the evidence that the dependency really left the tree instead of
+// being re-suppressed.
+//
+// The graph as measured with npm ls / npm explain minimatch:
+//   @vscode/vsce 4.1.0 -> minimatch 11.0.4   (4.1.0 itself still declares ^10.2.6; the override is
+//     what moves it, and it is scoped to this package alone)
+//   eslint 9.39.5, @eslint/config-array 0.21.2 and @eslint/eslintrc 3.3.7 -> minimatch 3.1.5 each,
+//     all below the advisory's lower bound and deliberately left alone. A global override would
+//     force them from 3.x to 11.x, crossing an export-shape change those packages depend on.
+// An entry must carry all four fields: id, pkg, chain and reason. An id alone is not a reason.
+const TOLERATED_DEV = [];
 
 const PROJECTS = [
   { name: 'web server', dir: path.join(ROOT, 'explain-it-simply-website') },
