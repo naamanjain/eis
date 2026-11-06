@@ -33,5 +33,10 @@
     "@vscode/vsce": "4.1.0",
     "eslint": "9.39.5",
     "typescript": "5.9.3"
+  },
+  "overrides": {
+    "@vscode/vsce": {
+      "minimatch": "^11.0.1"
+    }
   }
 }

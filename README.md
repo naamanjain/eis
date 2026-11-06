@@ -195,10 +195,15 @@ grants no royalty on anything downstream builds commercially from it.
   still sold tomorrow.
 - **Only OpenRouter has been exercised end to end with a live key.** The other five adapters are
   verified against schemas, transports and error paths, not against a paid provider response.
-- **One development-only advisory remains open.** `GHSA-g3hv-75wg-m249` (`minimatch`, moderate, fixed
-  in 11.0.1) is reached only through ESLint and `@vscode/vsce`, both of which currently declare
-  `minimatch ^10.2.6`, so no compatible upgrade exists. It cannot reach a user: production trees are
-  audited with no severity floor. `npm run audit` names it explicitly rather than hiding it behind a
-  severity threshold — see [docs/DEVELOPMENT.md](docs/DEVELOPMENT.md).
+- **No open advisory in the toolchain.** `GHSA-g3hv-75wg-m249` (`minimatch` >= 7.0.0 and < 11.0.1,
+  moderate, denial of service through glob amplification) is gone: the copy `@vscode/vsce` resolves is
+  pinned to 11.x by an `overrides` entry **scoped to that one package**, because vsce 4.1.0 — the
+  current release — still declares `^10.2.6`, so no upstream bump existed. ESLint's three copies stay
+  at 3.1.5, below the affected range; a global override would have pushed them across a major
+  boundary. `npm audit --json` now reports `total: 0` and `npm run audit` passes with an **empty**
+  carve-out list — the policy fails on a stale exception, which is what proved the removal rather than
+  a re-suppression. Neither build tool ships inside the extension: `verify:package` enumerates all 41
+  packaged files, and production trees are audited with no severity floor —
+  see [docs/DEVELOPMENT.md](docs/DEVELOPMENT.md).
 - **No hosted deployment of the web app exists**, so nothing here claims HTTPS, header or CDN
   behaviour on a public origin. Those are properties of wherever you deploy it.
